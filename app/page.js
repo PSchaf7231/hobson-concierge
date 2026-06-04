@@ -27,11 +27,11 @@ function BrandHeader({ persona }) {
   const logo = LOGOS[persona]
   const brandName = persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'
   return (
-    <div className="flex items-center gap-3">
-      <img src={logo} alt={brandName} className="h-14 w-14 object-contain" />
-      <div>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-[#C8CCD1]/60">Powered by Atlas AI</div>
-        <div className="font-serif text-[#E2C285] text-lg leading-tight">{brandName}</div>
+    <div className="flex items-center gap-4 min-w-0">
+      <img src={logo} alt={brandName} className="h-16 w-16 object-contain flex-shrink-0" />
+      <div className="min-w-0">
+        <div className="text-[9px] uppercase tracking-[0.25em] text-[#C8CCD1]/60 whitespace-nowrap">Powered by Atlas AI</div>
+        <div className="font-serif text-[#E2C285] text-xl leading-tight whitespace-nowrap">{brandName}</div>
       </div>
     </div>
   )
@@ -905,15 +905,15 @@ function App() {
       {/* Top Nav */}
       <header className="sticky top-0 z-30 backdrop-blur bg-[#1B3A4F]/95 border-b border-[#C9A867]/20 text-white">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <div className="flex items-center gap-3">
-              <img src={LOGOS.residential} alt="Anasa" className="h-12 w-12 object-contain" />
-              <span className="text-base text-[#E2C285]/40 font-serif italic">×</span>
-              <img src={LOGOS.commercial} alt="Next Endeavor" className="h-12 w-12 object-contain" />
+              <img src={LOGOS.residential} alt="The Anasa Collection" className="h-14 w-14 object-contain" />
+              <span className="text-lg text-[#E2C285]/40 font-serif italic">×</span>
+              <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-14 w-14 object-contain" />
             </div>
-            <div className="hidden md:block border-l border-white/20 pl-4">
-              <div className="text-[10px] uppercase tracking-[0.25em] text-[#C8CCD1]/70">Concierge Platform</div>
-              <div className="text-sm font-serif text-[#E2C285]">Powered by Atlas AI</div>
+            <div className="hidden md:block border-l border-white/15 pl-5">
+              <div className="text-[9px] uppercase tracking-[0.3em] text-[#C8CCD1]/70 whitespace-nowrap">Concierge Platform</div>
+              <div className="text-base font-serif text-[#E2C285] mt-0.5">Powered by Atlas AI</div>
             </div>
           </div>
           <Tabs value={tab} onValueChange={setTab}>
