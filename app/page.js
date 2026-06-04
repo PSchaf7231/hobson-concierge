@@ -160,7 +160,7 @@ function PropertyCard({ p, isFavorite, onToggleFavorite, onView, persona }) {
       <div className="h-40 relative overflow-hidden">
         <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
         <Badge className="absolute top-2 left-2 bg-[#1B3A4F]/90 hover:bg-[#1B3A4F] text-[#E2C285] border-0 font-medium">
-          {p.type === 'residential' ? 'Anasa' : 'Next Endeavor'}
+          {p.type === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'}
         </Badge>
         {onToggleFavorite && (
           <button
@@ -316,12 +316,12 @@ function ChatPanel() {
         <div className="flex items-center gap-2">
           {leadTier && <TierBadge tier={leadTier} score={leadScore} />}
           <Select value={persona} onValueChange={(v) => { setPersona(v); resetChat() }}>
-            <SelectTrigger className="h-8 w-[200px] bg-white/10 border-[#C9A867]/30 text-white text-xs hover:bg-white/15">
+            <SelectTrigger className="h-8 w-[220px] bg-white/10 border-[#C9A867]/30 text-white text-xs hover:bg-white/15">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="residential"><span className="flex items-center gap-2"><Crown className="h-3.5 w-3.5 text-[#C9A867]" />Anasa Collection</span></SelectItem>
-              <SelectItem value="commercial"><span className="flex items-center gap-2"><Building2 className="h-3.5 w-3.5 text-[#C9A867]" />Next Endeavor CRE</span></SelectItem>
+              <SelectItem value="residential"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#C9A867]" />The Anasa Collection</span></SelectItem>
+              <SelectItem value="commercial"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#C9A867]" />Next Endeavor CRE</span></SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -511,7 +511,7 @@ function AdminDashboard() {
             {filteredSessions.length === 0 && <div className="p-4 text-sm text-[#1B3A4F]/50">No leads in this filter yet.</div>}
             {filteredSessions.map(s => {
               const last = s.messages?.[s.messages.length - 1]
-              const brand = s.persona === 'residential' ? 'Anasa' : 'Next Endeavor'
+              const brand = s.persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'
               return (
                 <button key={s.id} onClick={() => loadSession(s.id)} className={`w-full text-left px-4 py-3 hover:bg-[#F5EDE0] transition ${selected?.id === s.id ? 'bg-[#C9A867]/10' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
@@ -593,7 +593,7 @@ function AdminDashboard() {
                   <Select value={selected.persona} onValueChange={v => updateSession({ persona: v })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="residential">Anasa Collection</SelectItem>
+                      <SelectItem value="residential">The Anasa Collection</SelectItem>
                       <SelectItem value="commercial">Next Endeavor CRE</SelectItem>
                     </SelectContent>
                   </Select>
@@ -748,10 +748,12 @@ function App() {
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="p-6 border-[#C9A867]/40 bg-gradient-to-br from-white via-white to-[#C9A867]/5 hover:border-[#C9A867] transition-all hover:shadow-xl">
                 <div className="flex items-start justify-between mb-3">
-                  <img src={LOGOS.residential} alt="Anasa Collection" className="h-16 w-16 object-contain" />
+                  <div className="h-20 w-20 rounded-md bg-[#1B3A4F] flex items-center justify-center p-2">
+                    <img src={LOGOS.residential} alt="The Anasa Collection" className="h-full w-full object-contain mix-blend-screen" />
+                  </div>
                   <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Residential Luxury</Badge>
                 </div>
-                <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">Anasa Collection</h3>
+                <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">The Anasa Collection</h3>
                 <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Atlas speaks the language of lifestyle. Warm, evocative, attuned to the way you want to live — schools, views, privacy, prestige. Curates trophy listings that fit.</p>
                 <ul className="text-sm mt-4 space-y-1.5 text-[#1B3A4F]/80">
                   <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Captures buyer aspirations &amp; lifestyle</li>
@@ -761,8 +763,10 @@ function App() {
               </Card>
               <Card className="p-6 border-[#C9A867]/40 bg-gradient-to-br from-white via-white to-[#1B3A4F]/5 hover:border-[#C9A867] transition-all hover:shadow-xl">
                 <div className="flex items-start justify-between mb-3">
-                  <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-16 w-16 object-contain" />
-                  <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Commercial Solutions</Badge>
+                  <div className="h-20 w-20 rounded-md bg-[#1B3A4F] flex items-center justify-center p-2">
+                    <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-full w-full object-contain mix-blend-screen" />
+                  </div>
+                  <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Commercial Real Estate</Badge>
                 </div>
                 <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">Next Endeavor CRE</h3>
                 <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Atlas pivots to analyst mode. Sharp, financial, deal-focused. Qualifies the principal, deal size, and target cap rate — surfaces investment-grade assets.</p>
@@ -793,9 +797,9 @@ function App() {
       <footer className="border-t border-[#C9A867]/20 bg-[#1B3A4F] text-[#C8CCD1] mt-12">
         <div className="max-w-7xl mx-auto px-6 py-6 text-xs flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img src={LOGOS.residential} alt="" className="h-6 w-6 object-contain opacity-70" />
+            <img src={LOGOS.residential} alt="" className="h-6 w-6 object-contain opacity-90 mix-blend-screen" />
             <span className="opacity-50">×</span>
-            <img src={LOGOS.commercial} alt="" className="h-6 w-6 object-contain opacity-70" />
+            <img src={LOGOS.commercial} alt="" className="h-6 w-6 object-contain opacity-90 mix-blend-screen" />
           </div>
           <div className="opacity-60">Powered by Atlas AI · Claude Sonnet 4</div>
         </div>
