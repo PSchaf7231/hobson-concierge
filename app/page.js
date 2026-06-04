@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X } from 'lucide-react'
 
 // ============ BRAND ASSETS ============
 const LOGOS = {
@@ -48,10 +49,114 @@ function TierBadge({ tier, score }) {
   )
 }
 
-function PropertyCard({ p, isFavorite, onToggleFavorite, persona }) {
-  const goldAccent = persona === 'residential' ? '#D4AF37' : '#D4AF37'
+function PropertyDetailDialog({ property, open, onOpenChange, isFavorite, onToggleFavorite, onAskAtlas }) {
+  if (!property) return null
+  const p = property
+  const isCommercial = p.type === 'commercial'
   return (
-    <Card className="overflow-hidden border border-[#C8CCD1]/40 hover:shadow-xl hover:border-[#D4AF37]/60 transition-all bg-white group">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl p-0 overflow-hidden bg-white border-[#D4AF37]/30">
+        <div className="relative h-72 bg-[#0B1B33]">
+          <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+          <Badge className="absolute top-3 left-3 bg-[#0B1B33]/95 text-[#E8C766] border-0 font-medium">{isCommercial ? 'Next Endeavor CRE' : 'Anasa Collection'}</Badge>
+          <button onClick={() => onToggleFavorite && onToggleFavorite(p.id)} className="absolute top-3 right-12 h-9 w-9 rounded-full bg-white/95 hover:bg-white flex items-center justify-center shadow">
+            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-[#D4AF37] text-[#D4AF37]' : 'text-[#0B1B33]/60'}`} />
+          </button>
+          <div className="absolute bottom-4 left-4 right-4 text-white">
+            <div className="font-serif text-3xl text-[#E8C766] leading-tight">{p.title}</div>
+            <div className="flex items-center gap-1 mt-1 text-sm opacity-90"><MapPin className="h-4 w-4" />{p.address}</div>
+          </div>
+        </div>
+        <div className="p-6 space-y-5 max-h-[55vh] overflow-y-auto">
+          <div className="flex items-baseline justify-between">
+            <div className="text-3xl font-bold text-[#D4AF37]">${p.price.toLocaleString()}</div>
+            {p.capRate && (
+              <div className="text-right">
+                <div className="text-xs uppercase tracking-wider text-[#0B1B33]/60">Cap rate</div>
+                <div className="text-2xl font-bold text-emerald-700">{p.capRate}%</div>
+              </div>
+            )}
+          </div>
+
+          {/* Key stats grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-y border-[#C8CCD1]/40 py-4">
+            {p.beds > 0 && (
+              <div className="text-center">
+                <BedDouble className="h-5 w-5 text-[#D4AF37] mx-auto" />
+                <div className="text-lg font-semibold text-[#0B1B33] mt-1">{p.beds}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#0B1B33]/60">Bedrooms</div>
+              </div>
+            )}
+            {p.baths > 0 && (
+              <div className="text-center">
+                <Bath className="h-5 w-5 text-[#D4AF37] mx-auto" />
+                <div className="text-lg font-semibold text-[#0B1B33] mt-1">{p.baths}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#0B1B33]/60">Bathrooms</div>
+              </div>
+            )}
+            <div className="text-center">
+              <Maximize className="h-5 w-5 text-[#D4AF37] mx-auto" />
+              <div className="text-lg font-semibold text-[#0B1B33] mt-1">{p.sqft.toLocaleString()}</div>
+              <div className="text-[10px] uppercase tracking-wider text-[#0B1B33]/60">Square Feet</div>
+            </div>
+            {p.noi && (
+              <div className="text-center">
+                <TrendingUp className="h-5 w-5 text-[#D4AF37] mx-auto" />
+                <div className="text-lg font-semibold text-[#0B1B33] mt-1">${(p.noi/1000).toFixed(0)}K</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#0B1B33]/60">Annual NOI</div>
+              </div>
+            )}
+            {p.zoning && !p.noi && (
+              <div className="text-center">
+                <Building2 className="h-5 w-5 text-[#D4AF37] mx-auto" />
+                <div className="text-lg font-semibold text-[#0B1B33] mt-1">{p.zoning}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#0B1B33]/60">Zoning</div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="text-xs uppercase tracking-widest text-[#0B1B33]/50 mb-2">Description</div>
+            <p className="text-sm text-[#0B1B33]/80 leading-relaxed">{p.description}</p>
+          </div>
+
+          <div>
+            <div className="text-xs uppercase tracking-widest text-[#0B1B33]/50 mb-2">Features & Amenities</div>
+            <div className="flex flex-wrap gap-1.5">
+              {(p.amenities || []).map(a => (
+                <span key={a} className="text-xs px-2.5 py-1 rounded-full bg-[#F7F4EC] border border-[#C8CCD1]/40 text-[#0B1B33]/80 capitalize">{a}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-[#F7F4EC] rounded p-2">
+              <div className="text-[10px] uppercase tracking-wider text-[#0B1B33]/50">Listing ID</div>
+              <div className="font-mono text-[#0B1B33]">{p.id.toUpperCase()}</div>
+            </div>
+            <div className="bg-[#F7F4EC] rounded p-2">
+              <div className="text-[10px] uppercase tracking-wider text-[#0B1B33]/50">Property Type</div>
+              <div className="text-[#0B1B33] capitalize">{p.subtype}</div>
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="bg-[#F7F4EC] border-t border-[#C8CCD1]/40 p-4 gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="border-[#C8CCD1]">Close</Button>
+          {onAskAtlas && (
+            <Button onClick={() => { onAskAtlas(p); onOpenChange(false) }} className="bg-[#0B1B33] hover:bg-[#0B1B33]/90 text-[#E8C766]">
+              <Calendar className="h-4 w-4 mr-2" />Ask Atlas to schedule a showing
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function PropertyCard({ p, isFavorite, onToggleFavorite, onView, persona }) {
+  return (
+    <Card className="overflow-hidden border border-[#C8CCD1]/40 hover:shadow-xl hover:border-[#D4AF37]/60 transition-all bg-white group cursor-pointer" onClick={() => onView && onView(p)}>
       <div className="h-40 relative overflow-hidden">
         <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
         <Badge className="absolute top-2 left-2 bg-[#0B1B33]/90 hover:bg-[#0B1B33] text-[#E8C766] border-0 font-medium">
@@ -66,11 +171,14 @@ function PropertyCard({ p, isFavorite, onToggleFavorite, persona }) {
             <Heart className={`h-4 w-4 transition ${isFavorite ? 'fill-[#D4AF37] text-[#D4AF37]' : 'text-[#0B1B33]/60'}`} />
           </button>
         )}
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition bg-[#0B1B33]/85 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+          <Eye className="h-3 w-3" />View details
+        </div>
       </div>
       <div className="p-3 space-y-1.5">
         <div className="font-serif text-[#0B1B33] text-base leading-tight">{p.title}</div>
         <div className="text-xs text-[#0B1B33]/60 flex items-center gap-1"><MapPin className="h-3 w-3" />{p.city}, {p.state}</div>
-        <div className="text-lg font-bold" style={{ color: goldAccent }}>${p.price.toLocaleString()}</div>
+        <div className="text-lg font-bold text-[#D4AF37]">${p.price.toLocaleString()}</div>
         <div className="flex flex-wrap gap-3 text-xs text-[#0B1B33]/70 pt-1">
           {p.beds > 0 && <span className="flex items-center gap-1"><BedDouble className="h-3 w-3" />{p.beds}</span>}
           {p.baths > 0 && <span className="flex items-center gap-1"><Bath className="h-3 w-3" />{p.baths}</span>}
@@ -99,6 +207,7 @@ function ChatPanel() {
   const [leadTier, setLeadTier] = useState(null)
   const [leadScore, setLeadScore] = useState(null)
   const [listening, setListening] = useState(false)
+  const [viewProperty, setViewProperty] = useState(null)
   const recognitionRef = useRef(null)
   const scrollRef = useRef(null)
 
@@ -260,7 +369,7 @@ function ChatPanel() {
           <div className="pt-3">
             <div className="text-xs font-semibold text-[#0B1B33] pl-9 pb-2 flex items-center gap-1.5 tracking-wide uppercase"><Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />Curated for you</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-9">
-              {recommended.map(p => <PropertyCard key={p.id} p={p} isFavorite={favIds.has(p.id)} onToggleFavorite={toggleFavorite} persona={persona} />)}
+              {recommended.map(p => <PropertyCard key={p.id} p={p} isFavorite={favIds.has(p.id)} onToggleFavorite={toggleFavorite} onView={setViewProperty} persona={persona} />)}
             </div>
           </div>
         )}
@@ -269,7 +378,7 @@ function ChatPanel() {
           <div className="pt-4">
             <div className="text-xs font-semibold text-[#0B1B33] pl-9 pb-2 flex items-center gap-1.5 tracking-wide uppercase"><Heart className="h-3.5 w-3.5 fill-[#D4AF37] text-[#D4AF37]" />My Shortlist ({favorites.length})</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-9">
-              {favorites.map(p => <PropertyCard key={'f'+p.id} p={p} isFavorite={true} onToggleFavorite={toggleFavorite} persona={persona} />)}
+              {favorites.map(p => <PropertyCard key={'f'+p.id} p={p} isFavorite={true} onToggleFavorite={toggleFavorite} onView={setViewProperty} persona={persona} />)}
             </div>
           </div>
         )}
@@ -297,6 +406,15 @@ function ChatPanel() {
           <Send className="h-4 w-4" />
         </Button>
       </div>
+
+      <PropertyDetailDialog
+        property={viewProperty}
+        open={!!viewProperty}
+        onOpenChange={(o) => !o && setViewProperty(null)}
+        isFavorite={viewProperty ? favIds.has(viewProperty.id) : false}
+        onToggleFavorite={toggleFavorite}
+        onAskAtlas={(p) => send(`Tell me more about ${p.title} in ${p.city} and how soon I could see it`)}
+      />
     </Card>
   )
 }
