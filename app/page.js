@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X } from 'lucide-react'
+import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer } from 'lucide-react'
 
 // ============ BRAND ASSETS ============
 const LOGOS = {
@@ -143,6 +143,11 @@ function PropertyDetailDialog({ property, open, onOpenChange, isFavorite, onTogg
         </div>
         <DialogFooter className="bg-[#F5EDE0] border-t border-[#C8CCD1]/40 p-4 gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="border-[#C8CCD1]">Close</Button>
+          <a href={`/brief/${p.id}`} target="_blank">
+            <Button variant="outline" className="border-[#C9A867] text-[#1B3A4F]">
+              <Printer className="h-4 w-4 mr-2" />Property Brief (PDF)
+            </Button>
+          </a>
           {onAskAtlas && (
             <Button onClick={() => { onAskAtlas(p); onOpenChange(false) }} className="bg-[#1B3A4F] hover:bg-[#1B3A4F]/90 text-[#E2C285]">
               <Calendar className="h-4 w-4 mr-2" />Ask Atlas to schedule a showing
@@ -376,7 +381,14 @@ function ChatPanel() {
 
         {favorites.length > 0 && (
           <div className="pt-4">
-            <div className="text-xs font-semibold text-[#1B3A4F] pl-9 pb-2 flex items-center gap-1.5 tracking-wide uppercase"><Heart className="h-3.5 w-3.5 fill-[#C9A867] text-[#C9A867]" />My Shortlist ({favorites.length})</div>
+            <div className="flex items-center justify-between pl-9 pb-2">
+              <div className="text-xs font-semibold text-[#1B3A4F] flex items-center gap-1.5 tracking-wide uppercase"><Heart className="h-3.5 w-3.5 fill-[#C9A867] text-[#C9A867]" />My Shortlist ({favorites.length})</div>
+              {sessionId && (
+                <a href={`/shortlist/${sessionId}`} target="_blank" className="text-xs text-[#C9A867] hover:underline font-medium flex items-center gap-1">
+                  Open shareable view →
+                </a>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-9">
               {favorites.map(p => <PropertyCard key={'f'+p.id} p={p} isFavorite={true} onToggleFavorite={toggleFavorite} onView={setViewProperty} persona={persona} />)}
             </div>
