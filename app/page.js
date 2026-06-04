@@ -12,8 +12,8 @@ import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, M
 
 // ============ BRAND ASSETS ============
 const LOGOS = {
-  residential: 'https://customer-assets.emergentagent.com/job_property-agent-ai-2/artifacts/n6efvnh4_AC3%20%281%29.png',
-  commercial: 'https://customer-assets.emergentagent.com/job_property-agent-ai-2/artifacts/wjn61vcc_white.png'
+  residential: '/anasa.png',
+  commercial: '/next-endeavor.png'
 }
 const HERO_IMG = 'https://images.unsplash.com/photo-1535498730771-e735b998cd64?crop=entropy&cs=srgb&fm=jpg&q=85&w=2400'
 
@@ -25,7 +25,7 @@ function BrandHeader({ persona }) {
   const brandName = persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'
   return (
     <div className="flex items-center gap-3">
-      <img src={logo} alt={brandName} className="h-11 w-11 object-contain mix-blend-screen" />
+      <img src={logo} alt={brandName} className="h-14 w-14 object-contain" />
       <div>
         <div className="text-[10px] uppercase tracking-[0.2em] text-[#C8CCD1]/60">Powered by Atlas AI</div>
         <div className="font-serif text-[#E2C285] text-lg leading-tight">{brandName}</div>
@@ -666,10 +666,10 @@ function App() {
       <header className="sticky top-0 z-30 backdrop-blur bg-[#1B3A4F]/95 border-b border-[#C9A867]/20 text-white">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <img src={LOGOS.residential} alt="Anasa" className="h-8 w-8 object-contain mix-blend-screen" />
-              <span className="text-[10px] text-[#C8CCD1]/60">×</span>
-              <img src={LOGOS.commercial} alt="Next Endeavor" className="h-8 w-8 object-contain mix-blend-screen" />
+            <div className="flex items-center gap-3">
+              <img src={LOGOS.residential} alt="Anasa" className="h-12 w-12 object-contain" />
+              <span className="text-base text-[#E2C285]/40 font-serif italic">×</span>
+              <img src={LOGOS.commercial} alt="Next Endeavor" className="h-12 w-12 object-contain" />
             </div>
             <div className="hidden md:block border-l border-white/20 pl-4">
               <div className="text-[10px] uppercase tracking-[0.25em] text-[#C8CCD1]/70">Concierge Platform</div>
@@ -748,9 +748,7 @@ function App() {
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="p-6 border-[#C9A867]/40 bg-gradient-to-br from-white via-white to-[#C9A867]/5 hover:border-[#C9A867] transition-all hover:shadow-xl">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="h-20 w-20 rounded-md bg-[#1B3A4F] flex items-center justify-center p-2">
-                    <img src={LOGOS.residential} alt="The Anasa Collection" className="h-full w-full object-contain mix-blend-screen" />
-                  </div>
+                  <img src={LOGOS.residential} alt="The Anasa Collection" className="h-28 w-28 object-contain" />
                   <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Residential Luxury</Badge>
                 </div>
                 <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">The Anasa Collection</h3>
@@ -763,9 +761,7 @@ function App() {
               </Card>
               <Card className="p-6 border-[#C9A867]/40 bg-gradient-to-br from-white via-white to-[#1B3A4F]/5 hover:border-[#C9A867] transition-all hover:shadow-xl">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="h-20 w-20 rounded-md bg-[#1B3A4F] flex items-center justify-center p-2">
-                    <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-full w-full object-contain mix-blend-screen" />
-                  </div>
+                  <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-28 w-28 object-contain" />
                   <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Commercial Real Estate</Badge>
                 </div>
                 <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">Next Endeavor CRE</h3>
@@ -797,9 +793,9 @@ function App() {
       <footer className="border-t border-[#C9A867]/20 bg-[#1B3A4F] text-[#C8CCD1] mt-12">
         <div className="max-w-7xl mx-auto px-6 py-6 text-xs flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img src={LOGOS.residential} alt="" className="h-6 w-6 object-contain opacity-90 mix-blend-screen" />
-            <span className="opacity-50">×</span>
-            <img src={LOGOS.commercial} alt="" className="h-6 w-6 object-contain opacity-90 mix-blend-screen" />
+            <img src={LOGOS.residential} alt="" className="h-9 w-9 object-contain" />
+            <span className="opacity-40 font-serif italic">×</span>
+            <img src={LOGOS.commercial} alt="" className="h-9 w-9 object-contain" />
           </div>
           <div className="opacity-60">Powered by Atlas AI · Claude Sonnet 4</div>
         </div>
