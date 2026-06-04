@@ -53,17 +53,43 @@ async function ensureSeed(db) {
   }
 }
 
-// ============= PERSONAS =============
+// ============= PERSONAS (brand-aware) =============
 const PERSONAS = {
   residential: {
-    name: 'Residential Luxury',
-    systemPrompt: `You are Atlas, a warm, attentive luxury residential real-estate concierge. Your personality is refined, friendly, lifestyle-focused.\n\nYour goals on every turn:\n1) Build rapport. Greet the user, get their name and contact (email/phone) naturally within the first 2-3 turns. Don't be pushy.\n2) Discover preferences: target location/neighborhood, budget range, asset type (villa, penthouse, estate, condo), # beds/baths, lifestyle wants (schools, views, pool, security, privacy, walkability), timeline, financing readiness.\n3) When you have at least location + budget OR enough signal, present curated property recommendations from the catalog by referencing their ids.\n4) Speak in warm, evocative, lifestyle-rich language. Paint a picture. Be brief and elegant (3-6 sentences typical).\n5) NEVER invent properties. ONLY recommend from the provided catalog.`
+    name: 'Anasa Collection',
+    brand: 'Anasa Collection',
+    systemPrompt: `You are Atlas, the AI concierge for ANASA COLLECTION — a luxury residential real estate brand representing the finest homes for discerning buyers. Your personality is refined, warm, attentive, lifestyle-rich.
+
+Your goals each turn:
+1) Build genuine rapport. Greet the user, capture their name and contact (email/phone) naturally within the first 2-3 turns. Never pushy.
+2) Discover preferences: target location/neighborhood, budget range, asset type (villa, penthouse, estate, condo), # beds/baths, lifestyle wants (schools, views, pool, security, privacy, walkability), timeline, financing readiness.
+3) When you have at least location + budget OR enough signal, present curated property recommendations from the ANASA catalog by referencing their ids.
+4) Speak in warm, evocative, lifestyle-rich language. Paint a picture. Brief and elegant (3-6 sentences typical).
+5) Always reference "Anasa Collection" naturally when appropriate ("from our Anasa Collection", "Anasa portfolio", etc).
+6) NEVER invent properties. ONLY recommend from the provided catalog.`
   },
   commercial: {
-    name: 'Commercial / Medical Acquisition',
-    systemPrompt: `You are Atlas, a sharp, analytical commercial & medical real-estate acquisition advisor. Your tone is professional, concise, data-driven.\n\nYour goals every turn:\n1) Identify the principal/buyer entity: name, firm, role, contact email. Be efficient.\n2) Discover deal criteria: asset class (office, medical office building, ambulatory surgical center, retail), target market(s), check size / total deal size, required cap rate / yield, leverage, hold period, tenancy profile (NNN, gross), zoning, sq ft range, occupancy threshold.\n3) When sufficient signal, present matching opportunities from the catalog with cap rate, NOI, price, and a 1-line investment thesis.\n4) Use precise terminology (cap rate, NOI, WALE, NNN, MOB, ASC, cash-on-cash). Skip lifestyle language.\n5) NEVER invent listings. Only reference catalog ids.`
+    name: 'Next Endeavor CRE',
+    brand: 'Next Endeavor CRE',
+    systemPrompt: `You are Atlas, the AI acquisition advisor for NEXT ENDEAVOR CRE — a boutique commercial real estate solutions firm specializing in office, medical, and investment-grade assets. Your tone is sharp, professional, data-driven.
+
+Your goals each turn:
+1) Identify the principal/buyer entity efficiently: name, firm, role, contact email.
+2) Discover deal criteria: asset class (office, medical office building, ambulatory surgical center, retail), target market(s), check size / total deal size, required cap rate / yield, leverage, hold period, tenancy profile (NNN, gross), zoning, sq ft range, occupancy threshold.
+3) When sufficient signal, present matching opportunities from the NEXT ENDEAVOR catalog with cap rate, NOI, price, and a 1-line investment thesis.
+4) Use precise terminology (cap rate, NOI, WALE, NNN, MOB, ASC, cash-on-cash). Skip lifestyle language.
+5) Reference "Next Endeavor CRE" naturally where appropriate.
+6) NEVER invent listings. Only reference catalog ids.`
   }
 }
+
+// ============= LEAD SCORING RUBRIC =============
+const SCORING_RUBRIC = `LEAD SCORING (0-100 integer):
+- 0-30  COLD: anonymous, vague, exploring only
+- 31-65 WARM: name captured, some preferences, exploring fit, no clear timeline
+- 66-100 HOT: name + contact captured, clear budget + location + asset type, timeline/intent expressed
+Tier mapping: <=30 cold, 31-65 warm, >=66 hot.
+Be honest. A lead who has only said "hi" is COLD. A lead who has shared budget+location+contact+timeline is HOT.`
 
 // ============= LLM CALL =============
 async function callAtlas({ persona, messages, propertiesCatalog, knownPreferences, knownLead }) {
@@ -73,7 +99,30 @@ async function callAtlas({ persona, messages, propertiesCatalog, knownPreference
     return base
   }).join('\n')
 
-  const sysPrompt = `${personaCfg.systemPrompt}\n\n=== PROPERTY CATALOG (only these ids exist) ===\n${catalogSummary}\n\n=== KNOWN LEAD INFO (so far) ===\n${JSON.stringify(knownLead||{}, null, 2)}\n\n=== KNOWN PREFERENCES (so far) ===\n${JSON.stringify(knownPreferences||{}, null, 2)}\n\nOUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:\n{\n  "reply": "<your conversational message to user>",\n  "lead": { "name": null|string, "email": null|string, "phone": null|string, "company": null|string },\n  "preferences": { "location": null|string, "budget_min": null|number, "budget_max": null|number, "asset_type": null|string, "beds": null|number, "baths": null|number, "amenities": [], "timeline": null|string, "cap_rate_target": null|number, "zoning": null|string, "notes": null|string },\n  "recommended_ids": ["p1", ...],\n  "stage": "discovery" | "qualified" | "showing" | "negotiating" | "closed"\n}\nMerge new info with KNOWN values — preserve previously captured fields if user hasn't changed them. recommended_ids must be a subset of catalog ids. Only fill recommendations when you have enough criteria; otherwise empty array.`
+  const sysPrompt = `${personaCfg.systemPrompt}
+
+=== PROPERTY CATALOG (only these ids exist) ===
+${catalogSummary}
+
+=== KNOWN LEAD INFO (so far) ===
+${JSON.stringify(knownLead||{}, null, 2)}
+
+=== KNOWN PREFERENCES (so far) ===
+${JSON.stringify(knownPreferences||{}, null, 2)}
+
+${SCORING_RUBRIC}
+
+OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
+{
+  "reply": "<your conversational message to user>",
+  "lead": { "name": null|string, "email": null|string, "phone": null|string, "company": null|string },
+  "preferences": { "location": null|string, "budget_min": null|number, "budget_max": null|number, "asset_type": null|string, "beds": null|number, "baths": null|number, "amenities": [], "timeline": null|string, "cap_rate_target": null|number, "zoning": null|string, "notes": null|string },
+  "recommended_ids": ["p1", ...],
+  "stage": "discovery" | "qualified" | "showing" | "negotiating" | "closed",
+  "lead_score": 0-100,
+  "lead_tier": "cold" | "warm" | "hot"
+}
+Merge new info with KNOWN values — preserve previously captured fields if user hasn't changed them. recommended_ids must be a subset of catalog ids. Only fill recommendations when you have enough criteria; otherwise empty array.`
 
   const apiMessages = [
     { role: 'system', content: sysPrompt },
@@ -89,7 +138,7 @@ async function callAtlas({ persona, messages, propertiesCatalog, knownPreference
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       messages: apiMessages,
-      max_tokens: 1200,
+      max_tokens: 1400,
       temperature: 0.6
     })
   })
@@ -101,12 +150,10 @@ async function callAtlas({ persona, messages, propertiesCatalog, knownPreference
 
   const data = await res.json()
   const raw = data?.choices?.[0]?.message?.content || ''
-  // Try to parse JSON. Strip markdown if present.
   let cleaned = raw.trim()
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(json)?/i, '').replace(/```$/, '').trim()
   }
-  // Extract first JSON object if there's leading text
   const firstBrace = cleaned.indexOf('{')
   const lastBrace = cleaned.lastIndexOf('}')
   if (firstBrace !== -1 && lastBrace !== -1) {
@@ -116,7 +163,7 @@ async function callAtlas({ persona, messages, propertiesCatalog, knownPreference
   try {
     parsed = JSON.parse(cleaned)
   } catch (e) {
-    parsed = { reply: raw, lead: knownLead||{}, preferences: knownPreferences||{}, recommended_ids: [], stage: 'discovery' }
+    parsed = { reply: raw, lead: knownLead||{}, preferences: knownPreferences||{}, recommended_ids: [], stage: 'discovery', lead_score: 10, lead_tier: 'cold' }
   }
   return parsed
 }
@@ -130,7 +177,7 @@ function mergeObj(prev, next) {
       if (v.length > 0) out[k] = v
     } else if (typeof v === 'object') {
       out[k] = mergeObj(out[k], v)
-    } else if (v !== '' ) {
+    } else if (v !== '') {
       out[k] = v
     }
   }
@@ -147,7 +194,6 @@ async function handleRoute(request, { params }) {
     const db = await connectToMongo()
     await ensureSeed(db)
 
-    // Health
     if ((route === '/' || route === '/root') && method === 'GET') {
       return handleCORS(NextResponse.json({ message: 'Atlas Concierge API live' }))
     }
@@ -176,27 +222,23 @@ async function handleRoute(request, { params }) {
           lead: {},
           preferences: {},
           recommended_ids: [],
+          favorite_ids: [],
           stage: 'discovery',
+          lead_score: 5,
+          lead_tier: 'cold',
           status: 'active',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
         await db.collection('sessions').insertOne(session)
       }
-      // Allow persona change mid-session
-      if (persona && persona !== session.persona) {
-        session.persona = persona
-      }
+      if (persona && persona !== session.persona) session.persona = persona
 
-      // Append user message
       session.messages.push({ role: 'user', content: message, ts: new Date().toISOString() })
-      // Keep last 30 messages
       const recent = session.messages.slice(-30)
 
-      // Load catalog
       const propsCatalog = await db.collection('properties').find({}).toArray()
 
-      // Call Atlas
       let parsed
       try {
         parsed = await callAtlas({
@@ -214,15 +256,16 @@ async function handleRoute(request, { params }) {
       const assistantReply = parsed.reply || "I'm here. Tell me what you're looking for."
       session.messages.push({ role: 'assistant', content: assistantReply, ts: new Date().toISOString() })
 
-      // Merge lead + preferences (preserve existing)
       session.lead = mergeObj(session.lead, parsed.lead)
       session.preferences = mergeObj(session.preferences, parsed.preferences)
-      // Filter recommendation ids against catalog
       const validIds = new Set(propsCatalog.map(p => p.id))
       const recIds = (parsed.recommended_ids || []).filter(id => validIds.has(id))
       session.recommended_ids = recIds
       session.stage = parsed.stage || session.stage
+      if (typeof parsed.lead_score === 'number') session.lead_score = Math.max(0, Math.min(100, Math.round(parsed.lead_score)))
+      if (parsed.lead_tier) session.lead_tier = parsed.lead_tier
       session.updatedAt = new Date().toISOString()
+      if (!session.favorite_ids) session.favorite_ids = []
 
       await db.collection('sessions').updateOne(
         { id: sessionId },
@@ -233,6 +276,9 @@ async function handleRoute(request, { params }) {
             preferences: session.preferences,
             recommended_ids: session.recommended_ids,
             stage: session.stage,
+            lead_score: session.lead_score,
+            lead_tier: session.lead_tier,
+            favorite_ids: session.favorite_ids,
             updatedAt: session.updatedAt
           }
         }
@@ -240,6 +286,9 @@ async function handleRoute(request, { params }) {
 
       const recommendedProperties = propsCatalog
         .filter(p => recIds.includes(p.id))
+        .map(({ _id, ...rest }) => rest)
+      const favoriteProperties = propsCatalog
+        .filter(p => (session.favorite_ids || []).includes(p.id))
         .map(({ _id, ...rest }) => rest)
 
       return handleCORS(NextResponse.json({
@@ -249,38 +298,55 @@ async function handleRoute(request, { params }) {
         preferences: session.preferences,
         stage: session.stage,
         persona: session.persona,
-        recommended: recommendedProperties
+        lead_score: session.lead_score,
+        lead_tier: session.lead_tier,
+        recommended: recommendedProperties,
+        favorites: favoriteProperties
       }))
     }
 
-    // ---------- SESSIONS / LEADS (admin) ----------
-    if (route === '/sessions' && method === 'GET') {
-      const all = await db.collection('sessions').find({}).sort({ updatedAt: -1 }).toArray()
-      const cleaned = all.map(({ _id, ...rest }) => rest)
-      return handleCORS(NextResponse.json(cleaned))
+    // ---------- FAVORITE TOGGLE ----------
+    const favMatch = route.match(/^\/sessions\/([^/]+)\/favorite$/)
+    if (favMatch && method === 'POST') {
+      const sid = favMatch[1]
+      const { propertyId } = await request.json()
+      if (!propertyId) return handleCORS(NextResponse.json({ error: 'propertyId required' }, { status: 400 }))
+      const s = await db.collection('sessions').findOne({ id: sid })
+      if (!s) return handleCORS(NextResponse.json({ error: 'not found' }, { status: 404 }))
+      const favs = new Set(s.favorite_ids || [])
+      if (favs.has(propertyId)) favs.delete(propertyId)
+      else favs.add(propertyId)
+      const arr = Array.from(favs)
+      await db.collection('sessions').updateOne({ id: sid }, { $set: { favorite_ids: arr, updatedAt: new Date().toISOString() } })
+      const props = await db.collection('properties').find({ id: { $in: arr } }).toArray()
+      return handleCORS(NextResponse.json({ favorite_ids: arr, favorites: props.map(({_id, ...p}) => p) }))
     }
 
-    // Single session
+    // ---------- SESSIONS / LEADS ----------
+    if (route === '/sessions' && method === 'GET') {
+      const all = await db.collection('sessions').find({}).sort({ updatedAt: -1 }).toArray()
+      return handleCORS(NextResponse.json(all.map(({ _id, ...rest }) => rest)))
+    }
+
     const sessionMatch = route.match(/^\/sessions\/([^/]+)$/)
     if (sessionMatch && method === 'GET') {
       const sid = sessionMatch[1]
       const s = await db.collection('sessions').findOne({ id: sid })
       if (!s) return handleCORS(NextResponse.json({ error: 'not found' }, { status: 404 }))
       const { _id, ...rest } = s
-      // Hydrate recommended properties
       const props = await db.collection('properties').find({ id: { $in: rest.recommended_ids || [] } }).toArray()
       rest.recommendedProperties = props.map(({ _id, ...p }) => p)
+      const favs = await db.collection('properties').find({ id: { $in: rest.favorite_ids || [] } }).toArray()
+      rest.favoriteProperties = favs.map(({ _id, ...p }) => p)
       return handleCORS(NextResponse.json(rest))
     }
 
-    // Update session (admin override: status/stage/notes/persona)
     if (sessionMatch && method === 'PUT') {
       const sid = sessionMatch[1]
       const body = await request.json()
-      const allowed = ['status', 'stage', 'persona', 'adminNotes']
+      const allowed = ['status', 'stage', 'persona', 'adminNotes', 'lead_tier']
       const setObj = { updatedAt: new Date().toISOString() }
       for (const k of allowed) if (body[k] !== undefined) setObj[k] = body[k]
-      // Allow admin to push an assistant override message
       if (body.adminMessage) {
         const s = await db.collection('sessions').findOne({ id: sid })
         if (s) {
@@ -294,15 +360,16 @@ async function handleRoute(request, { params }) {
       return handleCORS(NextResponse.json(rest))
     }
 
-    // Stats for dashboard
     if (route === '/stats' && method === 'GET') {
       const all = await db.collection('sessions').find({}).toArray()
       const byStage = all.reduce((acc,s) => { acc[s.stage||'discovery'] = (acc[s.stage||'discovery']||0) + 1; return acc }, {})
       const byPersona = all.reduce((acc,s) => { acc[s.persona||'residential'] = (acc[s.persona||'residential']||0) + 1; return acc }, {})
+      const byTier = all.reduce((acc,s) => { acc[s.lead_tier||'cold'] = (acc[s.lead_tier||'cold']||0) + 1; return acc }, {})
       return handleCORS(NextResponse.json({
         totalLeads: all.length,
         byStage,
         byPersona,
+        byTier,
         recentLeads: all.sort((a,b)=> (b.updatedAt||'').localeCompare(a.updatedAt||'')).slice(0,5).map(({_id,messages,...r})=>({...r, lastMessage: messages?.[messages.length-1]?.content?.slice(0,140)}))
       }))
     }
