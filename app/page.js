@@ -218,6 +218,7 @@ function ChatPanel() {
   const [viewProperty, setViewProperty] = useState(null)
   const [speakingIdx, setSpeakingIdx] = useState(null)
   const [voiceError, setVoiceError] = useState(null)
+  const [voiceMode, setVoiceMode] = useState(false)
   const audioRef = useRef(null)
   const recognitionRef = useRef(null)
   const scrollRef = useRef(null)
@@ -231,6 +232,36 @@ function ChatPanel() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading, recommended])
 
+  // Voice Mode: auto-play Hobson's latest reply, then restart listening
+  useEffect(() => {
+    if (!voiceMode || messages.length === 0) return
+    const last = messages[messages.length - 1]
+    if (last.role !== 'assistant') return
+    // Auto-play this reply
+    ;(async () => {
+      try {
+        const res = await fetch('/api/voice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: last.content })
+        })
+        if (!res.ok) return
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audioRef.current = audio
+        audio.onended = () => {
+          URL.revokeObjectURL(url)
+          // Restart listening after Hobson finishes
+          if (voiceMode && recognitionRef.current) {
+            try { recognitionRef.current.start(); setListening(true) } catch (e) {}
+          }
+        }
+        await audio.play()
+      } catch (e) {}
+    })()
+  }, [messages, voiceMode])
+
   // Voice setup
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -240,21 +271,28 @@ function ChatPanel() {
     r.continuous = false
     r.interimResults = true
     r.lang = 'en-US'
-    let finalText = ''
     r.onresult = (e) => {
+      let finalText = ''
       let interim = ''
-      finalText = ''
       for (let i = 0; i < e.results.length; i++) {
         const t = e.results[i][0].transcript
         if (e.results[i].isFinal) finalText += t
         else interim += t
       }
       setInput((finalText || interim).trim())
+      // In voice mode, auto-send on final result
+      if (finalText && voiceMode) {
+        const text = finalText.trim()
+        if (text.length > 1) {
+          setInput('')
+          send(text)
+        }
+      }
     }
     r.onend = () => setListening(false)
     r.onerror = () => setListening(false)
     recognitionRef.current = r
-  }, [])
+  }, [voiceMode])
 
   function toggleMic() {
     const r = recognitionRef.current
@@ -368,6 +406,22 @@ function ChatPanel() {
         </div>
       </div>
 
+      {/* Voice Mode CTA Banner */}
+      <button
+        onClick={() => {
+          setVoiceMode(true)
+          setTimeout(() => {
+            try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
+          }, 300)
+        }}
+        className="w-full px-4 py-3 bg-gradient-to-r from-[#C9A867] via-[#E2C285] to-[#C9A867] text-[#1B3A4F] font-semibold text-sm flex items-center justify-center gap-2 hover:brightness-105 transition group relative overflow-hidden"
+      >
+        <span className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition" />
+        <Mic className="h-4 w-4 relative" />
+        <span className="relative tracking-wide">Talk to Hobson — Voice Conversation</span>
+        <span className="h-2 w-2 rounded-full bg-[#1B3A4F]/70 animate-pulse relative" />
+      </button>
+
       {/* Messages */}
       <div ref={scrollRef} className="h-[440px] overflow-y-auto px-4 py-4 bg-gradient-to-b from-[#F5EDE0] to-white space-y-3">
         {messages.length === 0 && (
@@ -472,6 +526,77 @@ function ChatPanel() {
         onToggleFavorite={toggleFavorite}
         onAskAtlas={(p) => send(`Tell me more about ${p.title} in ${p.city} and how soon I could see it`)}
       />
+
+      {/* Full-Screen Voice Mode Overlay */}
+      {voiceMode && (
+        <div className="fixed inset-0 z-[100] bg-gradient-to-br from-[#1B3A4F] via-[#264B62] to-[#1B3A4F] flex flex-col items-center justify-center">
+          <button
+            onClick={() => {
+              setVoiceMode(false)
+              if (recognitionRef.current && listening) { try { recognitionRef.current.stop() } catch (e) {} }
+              if (audioRef.current) { try { audioRef.current.pause() } catch (e) {} }
+              setListening(false)
+            }}
+            className="absolute top-6 right-6 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          <div className="text-center mb-12">
+            <div className="text-[#E2C285] text-xs uppercase tracking-[0.4em] mb-3">In Conversation With</div>
+            <div className="font-serif text-5xl text-[#F5EDE0]">Hobson</div>
+            <div className="text-[#F5EDE0]/60 text-sm mt-2">{persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'}</div>
+          </div>
+
+          {/* Pulsing orb */}
+          <div className="relative flex items-center justify-center my-8">
+            <div className={`absolute h-64 w-64 rounded-full bg-[#C9A867]/20 ${listening ? 'animate-ping' : ''}`} />
+            <div className={`absolute h-48 w-48 rounded-full bg-[#C9A867]/30 ${listening ? 'animate-pulse' : ''}`} />
+            <button
+              onClick={() => {
+                if (listening) {
+                  try { recognitionRef.current?.stop() } catch (e) {}
+                  setListening(false)
+                } else {
+                  setInput('')
+                  try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
+                }
+              }}
+              className={`relative h-36 w-36 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center shadow-2xl hover:scale-105 transition ${listening ? 'ring-4 ring-[#E2C285]/50' : ''}`}
+            >
+              {listening ? <Mic className="h-12 w-12" /> : (loading ? <Loader2 className="h-12 w-12 animate-spin" /> : <Mic className="h-12 w-12" />)}
+            </button>
+          </div>
+
+          <div className="text-center mt-4 max-w-2xl px-6">
+            <div className="text-[#E2C285] text-sm font-medium mb-2">
+              {listening ? 'Listening…' : loading ? 'Hobson is thinking…' : 'Tap the orb to speak'}
+            </div>
+            {messages.length > 0 && (
+              <div className="bg-white/5 backdrop-blur rounded-lg p-4 max-h-60 overflow-y-auto text-left text-sm space-y-3 mt-4">
+                {messages.slice(-4).map((m, i) => (
+                  <div key={i} className={m.role === 'user' ? 'text-[#F5EDE0]/80' : 'text-[#E2C285]'}>
+                    <span className="text-[10px] uppercase tracking-wider opacity-50 mr-2">{m.role === 'user' ? 'You' : 'Hobson'}</span>
+                    {m.content}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              setVoiceMode(false)
+              if (recognitionRef.current && listening) { try { recognitionRef.current.stop() } catch (e) {} }
+              if (audioRef.current) { try { audioRef.current.pause() } catch (e) {} }
+              setListening(false)
+            }}
+            className="mt-10 px-6 py-2 text-sm rounded-full border border-[#C9A867]/40 text-[#F5EDE0] hover:bg-white/10 transition"
+          >
+            End Conversation
+          </button>
+        </div>
+      )}
     </Card>
   )
 }
