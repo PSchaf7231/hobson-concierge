@@ -28,7 +28,7 @@ function BrandHeader({ persona }) {
   const brandName = persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'
   return (
     <div className="flex items-center gap-3 min-w-0">
-      <img src={logo} alt={brandName} className="h-12 w-12 object-contain flex-shrink-0" />
+      <img src={logo} alt={brandName} className="h-16 w-20 object-contain flex-shrink-0" />
       <div className="min-w-0">
         <div className="text-[9px] uppercase tracking-[0.25em] text-[#C8CCD1]/60 whitespace-nowrap">Concierge · Online</div>
         <div className="font-serif text-[#E2C285] text-lg leading-tight whitespace-nowrap">{brandName}</div>
@@ -949,9 +949,9 @@ function App() {
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-5">
             <div className="flex items-center gap-4">
-              <img src={LOGOS.residential} alt="The Anasa Collection" className="h-12 w-16 object-contain" />
-              <span className="text-base text-[#E2C285]/40 font-serif italic">×</span>
-              <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-12 w-12 object-contain" />
+              <img src={LOGOS.residential} alt="The Anasa Collection" className="h-16 w-24 object-contain" />
+              <span className="text-lg text-[#E2C285]/40 font-serif italic">×</span>
+              <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-16 w-16 object-contain" />
             </div>
           </div>
           <Tabs value={tab} onValueChange={setTab}>
@@ -999,7 +999,7 @@ function App() {
                     <div className="text-[10px] text-[#F5EDE0]/60 uppercase tracking-[0.2em] mt-1">Lead capture</div>
                   </div>
                   <div>
-                    <div className="text-3xl font-serif text-[#E2C285]">∞</div>
+                    <div className="text-3xl font-serif text-[#E2C285]">Total</div>
                     <div className="text-[10px] text-[#F5EDE0]/60 uppercase tracking-[0.2em] mt-1">Memory per lead</div>
                   </div>
                   <div>
@@ -1085,9 +1085,9 @@ function App() {
       <footer className="border-t border-[#C9A867]/20 bg-[#1B3A4F] text-[#C8CCD1] mt-12">
         <div className="max-w-7xl mx-auto px-6 py-6 text-xs flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img src={LOGOS.residential} alt="" className="h-12 w-16 object-contain" />
+            <img src={LOGOS.residential} alt="" className="h-14 w-20 object-contain" />
             <span className="opacity-40 font-serif italic">×</span>
-            <img src={LOGOS.commercial} alt="" className="h-12 w-12 object-contain" />
+            <img src={LOGOS.commercial} alt="" className="h-14 w-14 object-contain" />
           </div>
           <div className="opacity-60">Powered by Hobson AI · Bespoke Real Estate Advisory</div>
         </div>
