@@ -657,6 +657,183 @@ function AdminDashboard() {
   )
 }
 
+function IntegrationsPanel() {
+  const [settings, setSettings] = useState(null)
+  const [edit, setEdit] = useState({ boldtrail: {}, idx: {}, resend: {}, elevenlabs: {} })
+  const [busy, setBusy] = useState(null)
+  const [results, setResults] = useState({})
+
+  async function load() {
+    const r = await fetch('/api/settings').then(r => r.json())
+    setSettings(r)
+  }
+  useEffect(() => { load() }, [])
+
+  function setField(section, key, val) {
+    setEdit(prev => ({ ...prev, [section]: { ...prev[section], [key]: val } }))
+  }
+
+  async function save(section) {
+    setBusy(`save-${section}`)
+    await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [section]: edit[section] })
+    })
+    setEdit(prev => ({ ...prev, [section]: {} }))
+    await load()
+    setBusy(null)
+  }
+
+  async function runTest(endpoint, key) {
+    setBusy(key)
+    setResults(prev => ({ ...prev, [key]: null }))
+    try {
+      const r = await fetch(endpoint, { method: 'POST' }).then(r => r.json())
+      setResults(prev => ({ ...prev, [key]: r }))
+    } catch (e) {
+      setResults(prev => ({ ...prev, [key]: { ok: false, error: e.message } }))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (!settings) return <div className="p-6 text-[#1B3A4F]/60">Loading integrations…</div>
+
+  const sections = [
+    {
+      id: 'boldtrail',
+      title: 'Bold Trail CRM',
+      subtitle: 'Auto-push qualified leads with conversation history',
+      status: settings.boldtrail?.enabled && settings.boldtrail?.apiKey ? 'Connected' : 'Not configured',
+      fields: [
+        { key: 'baseUrl', label: 'API Base URL', placeholder: 'https://api.boldtrail.com/v1', type: 'text' },
+        { key: 'apiKey', label: 'API Key / Bearer Token', placeholder: 'bt_live_...', type: 'password' },
+        { key: 'accountId', label: 'Account / Site ID (optional)', placeholder: '123456', type: 'text' }
+      ],
+      toggles: [
+        { key: 'enabled', label: 'Enable integration' },
+        { key: 'autoPushHot', label: 'Auto-push HOT leads' },
+        { key: 'autoPushWarm', label: 'Auto-push WARM leads' }
+      ],
+      testButton: { label: 'Send test lead to Bold Trail', endpoint: '/api/integrations/boldtrail/test', resultKey: 'boldtrail-test' }
+    },
+    {
+      id: 'idx',
+      title: 'IDX / MLS Feed (RESO Web API)',
+      subtitle: 'Pull live listings from your MLS into Atlas',
+      status: settings.idx?.enabled && settings.idx?.feedUrl ? `Synced ${settings.idx.propertyCount || 0} listings` : 'Not configured',
+      fields: [
+        { key: 'feedUrl', label: 'RESO Web API base URL', placeholder: 'https://api.mlsgrid.com/v2', type: 'text' },
+        { key: 'clientId', label: 'Client ID (or username)', placeholder: 'optional for some feeds', type: 'text' },
+        { key: 'clientSecret', label: 'Client Secret / API token', placeholder: 'your secret', type: 'password' }
+      ],
+      toggles: [
+        { key: 'enabled', label: 'Enable IDX' }
+      ],
+      testButton: { label: 'Test connection', endpoint: '/api/integrations/idx/test', resultKey: 'idx-test' },
+      extraButton: { label: 'Sync now (pull 200 listings)', endpoint: '/api/integrations/idx/sync', resultKey: 'idx-sync' }
+    },
+    {
+      id: 'resend',
+      title: 'Resend (Email alerts)',
+      subtitle: 'Email yourself when Atlas qualifies a HOT lead',
+      status: settings.resend?.enabled ? 'Configured' : 'Not configured',
+      fields: [
+        { key: 'apiKey', label: 'Resend API key', placeholder: 're_...', type: 'password' },
+        { key: 'fromEmail', label: 'From address', placeholder: 'atlas@nextendeavorcre.com', type: 'text' },
+        { key: 'alertEmail', label: 'Send alerts to', placeholder: 'you@email.com', type: 'text' }
+      ],
+      toggles: [{ key: 'enabled', label: 'Enable email alerts' }]
+    },
+    {
+      id: 'elevenlabs',
+      title: 'ElevenLabs (Atlas speaks)',
+      subtitle: 'Premium voice responses from Atlas',
+      status: settings.elevenlabs?.enabled ? 'Configured' : 'Not configured',
+      fields: [
+        { key: 'apiKey', label: 'ElevenLabs API key', placeholder: 'sk_...', type: 'password' },
+        { key: 'voiceId', label: 'Voice ID', placeholder: 'EXAVITQu4vr4xnSDxMaL', type: 'text' }
+      ],
+      toggles: [{ key: 'enabled', label: 'Enable voice output' }]
+    }
+  ]
+
+  return (
+    <div className="space-y-4">
+      {sections.map(s => {
+        const current = settings[s.id] || {}
+        const draft = edit[s.id] || {}
+        return (
+          <Card key={s.id} className="p-5 border-[#C8CCD1]/40">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="font-serif text-xl text-[#1B3A4F]">{s.title}</h3>
+                <p className="text-xs text-[#1B3A4F]/60 mt-0.5">{s.subtitle}</p>
+              </div>
+              <Badge className={current.enabled ? 'bg-emerald-100 text-emerald-800 border-0' : 'bg-stone-100 text-stone-600 border-0'}>
+                {s.status}
+              </Badge>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3">
+              {s.fields.map(f => (
+                <div key={f.key}>
+                  <label className="text-[10px] uppercase tracking-wider text-[#1B3A4F]/60">{f.label}</label>
+                  <Input
+                    type={f.type}
+                    placeholder={current[f.key] || f.placeholder}
+                    value={draft[f.key] ?? ''}
+                    onChange={e => setField(s.id, f.key, e.target.value)}
+                    className="border-[#C8CCD1] text-sm mt-1"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-4 mt-4">
+              {s.toggles.map(t => (
+                <label key={t.key} className="flex items-center gap-2 text-sm text-[#1B3A4F] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={draft[t.key] !== undefined ? draft[t.key] : !!current[t.key]}
+                    onChange={e => setField(s.id, t.key, e.target.checked)}
+                    className="h-4 w-4 accent-[#C9A867]"
+                  />
+                  {t.label}
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-[#C8CCD1]/40">
+              <Button size="sm" onClick={() => save(s.id)} disabled={busy === `save-${s.id}`} className="bg-[#1B3A4F] hover:bg-[#1B3A4F]/90 text-[#E2C285]">
+                {busy === `save-${s.id}` ? 'Saving…' : 'Save'}
+              </Button>
+              {s.testButton && (
+                <Button size="sm" variant="outline" onClick={() => runTest(s.testButton.endpoint, s.testButton.resultKey)} disabled={busy === s.testButton.resultKey} className="border-[#C9A867] text-[#1B3A4F]">
+                  {busy === s.testButton.resultKey ? 'Testing…' : s.testButton.label}
+                </Button>
+              )}
+              {s.extraButton && (
+                <Button size="sm" variant="outline" onClick={() => runTest(s.extraButton.endpoint, s.extraButton.resultKey)} disabled={busy === s.extraButton.resultKey} className="border-[#C9A867] text-[#1B3A4F]">
+                  {busy === s.extraButton.resultKey ? 'Syncing…' : s.extraButton.label}
+                </Button>
+              )}
+            </div>
+            {results[s.testButton?.resultKey] && (
+              <pre className={`mt-3 text-[10px] p-2 rounded overflow-x-auto ${results[s.testButton.resultKey].ok ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : 'bg-red-50 text-red-900 border border-red-200'}`}>
+                {JSON.stringify(results[s.testButton.resultKey], null, 2)}
+              </pre>
+            )}
+            {s.extraButton && results[s.extraButton.resultKey] && (
+              <pre className={`mt-3 text-[10px] p-2 rounded overflow-x-auto ${results[s.extraButton.resultKey].ok ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : 'bg-red-50 text-red-900 border border-red-200'}`}>
+                {JSON.stringify(results[s.extraButton.resultKey], null, 2)}
+              </pre>
+            )}
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
 function App() {
   const [tab, setTab] = useState('concierge')
 
@@ -679,7 +856,8 @@ function App() {
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="bg-white/10 border border-[#C9A867]/20">
               <TabsTrigger value="concierge" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Sparkles className="h-3.5 w-3.5 mr-1.5" />Concierge</TabsTrigger>
-              <TabsTrigger value="admin" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Settings className="h-3.5 w-3.5 mr-1.5" />Broker Dashboard</TabsTrigger>
+              <TabsTrigger value="admin" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Settings className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
+              <TabsTrigger value="integrations" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Building2 className="h-3.5 w-3.5 mr-1.5" />Integrations</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -787,6 +965,16 @@ function App() {
             <div className="text-xs text-[#1B3A4F]/50">Auto-refreshes every 5s</div>
           </div>
           <AdminDashboard />
+        </section>
+      )}
+
+      {tab === 'integrations' && (
+        <section className="max-w-5xl mx-auto px-6 py-8">
+          <div className="mb-6">
+            <h1 className="text-3xl font-serif text-[#1B3A4F]">Integrations</h1>
+            <p className="text-[#1B3A4F]/60 text-sm mt-1">Connect Bold Trail, your MLS IDX feed, Resend, and ElevenLabs. Atlas activates each one the moment a valid key is saved.</p>
+          </div>
+          <IntegrationsPanel />
         </section>
       )}
 

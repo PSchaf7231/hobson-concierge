@@ -207,6 +207,168 @@ function mergeObj(prev, next) {
   return out
 }
 
+// ============= BOLD TRAIL HELPERS =============
+async function pushLeadToBoldTrail(session, cfg) {
+  const lead = session.lead || {}
+  const prefs = session.preferences || {}
+  const name = (lead.name || '').trim().split(/\s+/)
+  const firstName = name[0] || 'Atlas'
+  const lastName = name.slice(1).join(' ') || 'Lead'
+  const transcript = (session.messages || []).slice(-20).map(m =>
+    `[${m.role === 'user' ? 'Lead' : 'Atlas'}]: ${m.content}`
+  ).join('\n\n')
+  const prefsSummary = Object.entries(prefs).filter(([_,v]) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0))
+    .map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
+
+  const payload = {
+    firstName,
+    lastName,
+    email: lead.email || null,
+    phone: lead.phone || null,
+    company: lead.company || null,
+    source: 'Atlas AI Concierge',
+    tags: [
+      'atlas',
+      session.persona === 'residential' ? 'anasa-collection' : 'next-endeavor-cre',
+      `tier-${session.lead_tier || 'cold'}`,
+      `stage-${session.stage || 'discovery'}`
+    ],
+    notes: `ATLAS LEAD — Score ${session.lead_score || 0}/100 (${(session.lead_tier||'cold').toUpperCase()})\n\nPREFERENCES:\n${prefsSummary}\n\nCONVERSATION:\n${transcript}`,
+    customFields: {
+      atlas_session_id: session.id,
+      atlas_lead_score: session.lead_score,
+      atlas_lead_tier: session.lead_tier,
+      atlas_brand: session.persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE',
+      atlas_stage: session.stage,
+      ...prefs
+    }
+  }
+
+  const url = `${cfg.baseUrl.replace(/\/$/,'')}/leads`
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cfg.apiKey}`,
+        'Content-Type': 'application/json',
+        ...(cfg.accountId ? { 'X-Account-Id': cfg.accountId } : {})
+      },
+      body: JSON.stringify(payload)
+    })
+    const text = await res.text()
+    return { ok: res.ok, status: res.status, response: text.slice(0, 600), endpoint: url }
+  } catch (e) {
+    return { ok: false, error: e.message, endpoint: url }
+  }
+}
+
+// ============= IDX HELPERS — RESO Web API (modern) + simple JSON fallback =============
+async function testIdxConnection(cfg) {
+  const headers = await idxAuthHeaders(cfg)
+  const url = `${cfg.feedUrl.replace(/\/$/,'')}/Property?$top=1`
+  try {
+    const res = await fetch(url, { headers })
+    const text = await res.text()
+    let preview = text.slice(0, 400)
+    let parsed = null
+    try { parsed = JSON.parse(text) } catch (_) {}
+    return {
+      ok: res.ok,
+      status: res.status,
+      endpoint: url,
+      sampleCount: parsed?.value?.length ?? null,
+      preview
+    }
+  } catch (e) {
+    return { ok: false, error: e.message, endpoint: url }
+  }
+}
+
+async function idxAuthHeaders(cfg) {
+  // Try OAuth2 client credentials if both ID + secret present, else Bearer with apiKey if provided
+  const headers = { 'Accept': 'application/json' }
+  if (cfg.clientId && cfg.clientSecret) {
+    // Most RESO Web API providers use OAuth2 token endpoint; we'll try the simpler basic if no token endpoint set
+    // Cache token per process for short period in module scope
+    if (!globalThis.__idxToken || globalThis.__idxTokenExp < Date.now()) {
+      try {
+        const tokRes = await fetch(`${cfg.feedUrl.replace(/\/$/,'')}/oauth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'client_credentials', client_id: cfg.clientId, client_secret: cfg.clientSecret })
+        })
+        if (tokRes.ok) {
+          const j = await tokRes.json()
+          globalThis.__idxToken = j.access_token
+          globalThis.__idxTokenExp = Date.now() + (j.expires_in || 3600) * 1000 - 30000
+        }
+      } catch (_) {}
+    }
+    if (globalThis.__idxToken) headers['Authorization'] = `Bearer ${globalThis.__idxToken}`
+  } else if (cfg.clientSecret) {
+    headers['Authorization'] = `Bearer ${cfg.clientSecret}`
+  }
+  return headers
+}
+
+function mapResoToAtlas(reso) {
+  // Map a RESO Web API Property record into Atlas schema. Defensive — fields may not exist.
+  const id = `idx-${reso.ListingKey || reso.ListingId || reso.id || Math.random().toString(36).slice(2,10)}`
+  const isCommercial = (reso.PropertyType || '').toLowerCase().includes('commercial')
+    || (reso.PropertySubType || '').toLowerCase().match(/office|retail|industrial|medical|multi-family|mob|asc/i)
+  return {
+    id,
+    title: reso.UnparsedAddress || `${reso.StreetNumber||''} ${reso.StreetName||''}`.trim() || 'Listing',
+    address: reso.UnparsedAddress || [reso.StreetNumber, reso.StreetName, reso.City, reso.StateOrProvince].filter(Boolean).join(' '),
+    city: reso.City || '',
+    state: reso.StateOrProvince || '',
+    price: reso.ListPrice || 0,
+    beds: reso.BedroomsTotal || 0,
+    baths: reso.BathroomsTotalInteger || reso.BathroomsTotalDecimal || 0,
+    sqft: reso.LivingArea || reso.BuildingAreaTotal || 0,
+    type: isCommercial ? 'commercial' : 'residential',
+    subtype: (reso.PropertySubType || reso.PropertyType || 'home').toLowerCase(),
+    amenities: [].concat(
+      reso.PoolFeatures ? ['pool'] : [],
+      reso.ViewYN ? ['view'] : [],
+      reso.WaterfrontYN ? ['waterfront'] : [],
+      reso.GarageYN ? ['garage'] : []
+    ),
+    description: reso.PublicRemarks || reso.PrivateRemarks || '',
+    image: (reso.Media && reso.Media[0] && (reso.Media[0].MediaURL || reso.Media[0].MediaUrl)) || '/placeholder-listing.jpg',
+    tags: ['idx', reso.MlsStatus || 'active'].filter(Boolean),
+    capRate: reso.CapRate || null,
+    noi: reso.NetOperatingIncome || null,
+    zoning: reso.Zoning || null,
+    mlsNumber: reso.ListingId || reso.ListingKey,
+    source: 'idx'
+  }
+}
+
+async function syncIdxFeed(db, cfg) {
+  const headers = await idxAuthHeaders(cfg)
+  // Pull active residential + commercial listings, limit 200 per sync for safety
+  const url = `${cfg.feedUrl.replace(/\/$/,'')}/Property?$top=200&$filter=${encodeURIComponent("MlsStatus eq 'Active'")}`
+  try {
+    const res = await fetch(url, { headers })
+    if (!res.ok) {
+      const errText = await res.text()
+      return { ok: false, status: res.status, error: errText.slice(0, 400), endpoint: url }
+    }
+    const data = await res.json()
+    const items = data.value || data || []
+    let count = 0
+    for (const reso of items) {
+      const mapped = mapResoToAtlas(reso)
+      await db.collection('properties').updateOne({ id: mapped.id }, { $set: mapped }, { upsert: true })
+      count++
+    }
+    return { ok: true, count, endpoint: url }
+  } catch (e) {
+    return { ok: false, error: e.message, endpoint: url }
+  }
+}
+
 // ============= ROUTES =============
 async function handleRoute(request, { params }) {
   const { path = [] } = params
@@ -307,6 +469,27 @@ async function handleRoute(request, { params }) {
         }
       )
 
+      // Auto-push to Bold Trail if newly HOT (and configured)
+      try {
+        const settings = await db.collection('settings').findOne({ id: 'global' })
+        const btCfg = settings?.boldtrail
+        const shouldPush = btCfg?.enabled && btCfg?.apiKey && (
+          (btCfg.autoPushHot && session.lead_tier === 'hot') ||
+          (btCfg.autoPushWarm && session.lead_tier === 'warm')
+        )
+        const alreadyPushed = session.boldtrailPushedAt
+        if (shouldPush && !alreadyPushed && session.lead?.email) {
+          const result = await pushLeadToBoldTrail(session, btCfg)
+          await db.collection('sessions').updateOne({ id: sessionId }, { $set: {
+            boldtrailPushedAt: new Date().toISOString(),
+            boldtrailStatus: result.ok ? 'pushed' : 'failed'
+          }})
+          await db.collection('settings').updateOne({ id: 'global' }, { $inc: { 'boldtrail.pushCount': 1 }, $set: { 'boldtrail.lastPush': new Date().toISOString() } })
+        }
+      } catch (pushErr) {
+        console.error('BoldTrail auto-push failed:', pushErr.message)
+      }
+
       const recommendedProperties = propsCatalog
         .filter(p => recIds.includes(p.id))
         .map(({ _id, ...rest }) => rest)
@@ -395,6 +578,127 @@ async function handleRoute(request, { params }) {
         byTier,
         recentLeads: all.sort((a,b)=> (b.updatedAt||'').localeCompare(a.updatedAt||'')).slice(0,5).map(({_id,messages,...r})=>({...r, lastMessage: messages?.[messages.length-1]?.content?.slice(0,140)}))
       }))
+    }
+
+    // ============= INTEGRATION SETTINGS =============
+    if (route === '/settings' && method === 'GET') {
+      let s = await db.collection('settings').findOne({ id: 'global' })
+      if (!s) {
+        s = {
+          id: 'global',
+          boldtrail: { enabled: false, apiKey: '', baseUrl: 'https://api.boldtrail.com/v1', accountId: '', autoPushHot: true, autoPushWarm: false, lastPush: null, pushCount: 0 },
+          idx: { enabled: false, feedUrl: '', clientId: '', clientSecret: '', lastSync: null, propertyCount: 0, lastError: null },
+          resend: { enabled: false, apiKey: '', fromEmail: 'atlas@nextendeavorcre.com', alertEmail: '' },
+          elevenlabs: { enabled: false, apiKey: '', voiceId: '' }
+        }
+        await db.collection('settings').insertOne(s)
+      }
+      const { _id, ...rest } = s
+      // Mask keys for response
+      const masked = JSON.parse(JSON.stringify(rest))
+      ;['boldtrail','idx','resend','elevenlabs'].forEach(k => {
+        if (masked[k]?.apiKey) masked[k].apiKey = masked[k].apiKey.slice(0,6) + '••••' + masked[k].apiKey.slice(-4)
+        if (masked[k]?.clientSecret) masked[k].clientSecret = '••••' + masked[k].clientSecret.slice(-4)
+      })
+      return handleCORS(NextResponse.json(masked))
+    }
+
+    if (route === '/settings' && method === 'PUT') {
+      const body = await request.json()
+      const current = await db.collection('settings').findOne({ id: 'global' }) || { id: 'global' }
+      // Merge — only overwrite fields explicitly provided & non-empty (don't wipe existing masked values)
+      const merged = { ...current }
+      for (const section of ['boldtrail','idx','resend','elevenlabs']) {
+        if (body[section]) {
+          merged[section] = { ...(current[section]||{}) }
+          for (const [k,v] of Object.entries(body[section])) {
+            if (typeof v === 'string' && v.includes('••••')) continue  // skip masked echo
+            merged[section][k] = v
+          }
+        }
+      }
+      await db.collection('settings').updateOne({ id: 'global' }, { $set: merged }, { upsert: true })
+      return handleCORS(NextResponse.json({ ok: true }))
+    }
+
+    // ============= BOLD TRAIL — Test + Manual Push =============
+    if (route === '/integrations/boldtrail/test' && method === 'POST') {
+      const s = await db.collection('settings').findOne({ id: 'global' })
+      const cfg = s?.boldtrail
+      if (!cfg?.apiKey || !cfg?.baseUrl) {
+        return handleCORS(NextResponse.json({ ok: false, error: 'Bold Trail API key + base URL required' }, { status: 400 }))
+      }
+      try {
+        const testLead = {
+          firstName: 'Atlas',
+          lastName: 'Test',
+          email: `atlas-test-${Date.now()}@example.com`,
+          phone: '5555550100',
+          source: 'Atlas AI Concierge',
+          tags: ['atlas-test'],
+          notes: 'Connection test from Atlas AI Concierge'
+        }
+        const url = `${cfg.baseUrl.replace(/\/$/,'')}/leads`
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cfg.apiKey}`,
+            'Content-Type': 'application/json',
+            ...(cfg.accountId ? { 'X-Account-Id': cfg.accountId } : {})
+          },
+          body: JSON.stringify(testLead)
+        })
+        const ok = res.ok
+        const respText = await res.text()
+        return handleCORS(NextResponse.json({ ok, status: res.status, response: respText.slice(0, 500), endpoint: url }))
+      } catch (e) {
+        return handleCORS(NextResponse.json({ ok: false, error: e.message }, { status: 500 }))
+      }
+    }
+
+    const pushMatch = route.match(/^\/integrations\/boldtrail\/push\/([^/]+)$/)
+    if (pushMatch && method === 'POST') {
+      const sid = pushMatch[1]
+      const sess = await db.collection('sessions').findOne({ id: sid })
+      if (!sess) return handleCORS(NextResponse.json({ error: 'session not found' }, { status: 404 }))
+      const s = await db.collection('settings').findOne({ id: 'global' })
+      const cfg = s?.boldtrail
+      if (!cfg?.apiKey || !cfg?.baseUrl) return handleCORS(NextResponse.json({ ok: false, error: 'Bold Trail not configured' }, { status: 400 }))
+      const result = await pushLeadToBoldTrail(sess, cfg)
+      // Update session with push status
+      await db.collection('sessions').updateOne({ id: sid }, { $set: { boldtrailPushedAt: new Date().toISOString(), boldtrailStatus: result.ok ? 'pushed' : 'failed' } })
+      return handleCORS(NextResponse.json(result))
+    }
+
+    // ============= IDX — Test + Sync =============
+    if (route === '/integrations/idx/test' && method === 'POST') {
+      const s = await db.collection('settings').findOne({ id: 'global' })
+      const cfg = s?.idx
+      if (!cfg?.feedUrl) return handleCORS(NextResponse.json({ ok: false, error: 'IDX feed URL required' }, { status: 400 }))
+      try {
+        const result = await testIdxConnection(cfg)
+        return handleCORS(NextResponse.json(result))
+      } catch (e) {
+        return handleCORS(NextResponse.json({ ok: false, error: e.message }, { status: 500 }))
+      }
+    }
+
+    if (route === '/integrations/idx/sync' && method === 'POST') {
+      const s = await db.collection('settings').findOne({ id: 'global' })
+      const cfg = s?.idx
+      if (!cfg?.feedUrl) return handleCORS(NextResponse.json({ ok: false, error: 'IDX not configured' }, { status: 400 }))
+      try {
+        const result = await syncIdxFeed(db, cfg)
+        await db.collection('settings').updateOne({ id: 'global' }, { $set: {
+          'idx.lastSync': new Date().toISOString(),
+          'idx.propertyCount': result.count,
+          'idx.lastError': result.ok ? null : result.error
+        }})
+        return handleCORS(NextResponse.json(result))
+      } catch (e) {
+        await db.collection('settings').updateOne({ id: 'global' }, { $set: { 'idx.lastError': e.message } })
+        return handleCORS(NextResponse.json({ ok: false, error: e.message }, { status: 500 }))
+      }
     }
 
     return handleCORS(NextResponse.json({ error: `Route ${route} not found` }, { status: 404 }))
