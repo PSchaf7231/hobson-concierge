@@ -488,7 +488,7 @@ function AdminDashboard() {
       fetch('/api/sessions').then(r => r.json()),
       fetch('/api/stats').then(r => r.json())
     ])
-    setSessions(sRes || [])
+    setSessions(Array.isArray(sRes) ? sRes : [])
     setStats(statsRes)
   }
   useEffect(() => { load() }, [])
