@@ -22,10 +22,10 @@ const HERO_IMG = 'https://images.unsplash.com/photo-1535498730771-e735b998cd64?c
 
 function BrandHeader({ persona }) {
   const logo = LOGOS[persona]
-  const brandName = persona === 'residential' ? 'Anasa Collection' : 'Next Endeavor CRE'
+  const brandName = persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'
   return (
     <div className="flex items-center gap-3">
-      <img src={logo} alt={brandName} className="h-11 w-11 object-contain" />
+      <img src={logo} alt={brandName} className="h-11 w-11 object-contain mix-blend-screen" />
       <div>
         <div className="text-[10px] uppercase tracking-[0.2em] text-[#C8CCD1]/60">Powered by Atlas AI</div>
         <div className="font-serif text-[#E2C285] text-lg leading-tight">{brandName}</div>
@@ -667,9 +667,9 @@ function App() {
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <img src={LOGOS.residential} alt="Anasa" className="h-8 w-8 object-contain" />
+              <img src={LOGOS.residential} alt="Anasa" className="h-8 w-8 object-contain mix-blend-screen" />
               <span className="text-[10px] text-[#C8CCD1]/60">×</span>
-              <img src={LOGOS.commercial} alt="Next Endeavor" className="h-8 w-8 object-contain" />
+              <img src={LOGOS.commercial} alt="Next Endeavor" className="h-8 w-8 object-contain mix-blend-screen" />
             </div>
             <div className="hidden md:block border-l border-white/20 pl-4">
               <div className="text-[10px] uppercase tracking-[0.25em] text-[#C8CCD1]/70">Concierge Platform</div>
