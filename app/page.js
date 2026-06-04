@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,7 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer } from 'lucide-react'
+import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon } from 'lucide-react'
+
+const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-[640px] flex items-center justify-center bg-[#F5EDE0] border border-[#C9A867]/30 rounded text-[#1B3A4F]/60">Loading map…</div> })
 
 // ============ BRAND ASSETS ============
 const LOGOS = {
@@ -846,6 +849,54 @@ function IntegrationsPanel() {
   )
 }
 
+function MapView() {
+  const [props, setProps] = useState([])
+  const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/properties').then(r => r.json()).then(d => { setProps(d || []); setLoading(false) })
+  }, [])
+
+  const counts = {
+    all: props.length,
+    residential: props.filter(p => p.type === 'residential').length,
+    commercial: props.filter(p => p.type === 'commercial').length
+  }
+
+  return (
+    <section className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-px w-12 bg-[#C9A867]" />
+            <span className="text-[#1B3A4F]/60 text-xs uppercase tracking-[0.3em]">National Inventory</span>
+          </div>
+          <h1 className="text-3xl font-serif text-[#1B3A4F]">Property Map</h1>
+          <p className="text-[#1B3A4F]/60 text-sm mt-1">{counts.all} active listings · Click any pin for full details</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setFilter('all')} className={`text-xs px-3 py-1.5 rounded border transition ${filter==='all' ? 'bg-[#1B3A4F] text-[#E2C285] border-[#1B3A4F]' : 'border-[#C8CCD1] text-[#1B3A4F] hover:border-[#C9A867]'}`}>All ({counts.all})</button>
+          <button onClick={() => setFilter('residential')} className={`text-xs px-3 py-1.5 rounded border transition flex items-center gap-1.5 ${filter==='residential' ? 'bg-[#C9A867] text-[#1B3A4F] border-[#C9A867]' : 'border-[#C8CCD1] text-[#1B3A4F] hover:border-[#C9A867]'}`}>
+            <span className="h-2 w-2 rounded-full bg-[#C9A867] inline-block" />The Anasa Collection ({counts.residential})
+          </button>
+          <button onClick={() => setFilter('commercial')} className={`text-xs px-3 py-1.5 rounded border transition flex items-center gap-1.5 ${filter==='commercial' ? 'bg-[#1B3A4F] text-[#E2C285] border-[#1B3A4F]' : 'border-[#C8CCD1] text-[#1B3A4F] hover:border-[#C9A867]'}`}>
+            <span className="h-2 w-2 rounded-full bg-[#1B3A4F] inline-block" />Next Endeavor CRE ({counts.commercial})
+          </button>
+        </div>
+      </div>
+      {loading ? (
+        <div className="h-[640px] flex items-center justify-center bg-[#F5EDE0] border border-[#C9A867]/30 rounded text-[#1B3A4F]/60">Loading properties…</div>
+      ) : (
+        <PropertyMap properties={props} filterType={filter} />
+      )}
+      <div className="mt-3 text-[11px] text-[#1B3A4F]/50 italic">
+        Once your Beaches MLS feed is live, this map will plot all active RAPB+GFLR listings in real time.
+      </div>
+    </section>
+  )
+}
+
 function App() {
   const [tab, setTab] = useState('concierge')
 
@@ -868,6 +919,7 @@ function App() {
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="bg-white/10 border border-[#C9A867]/20">
               <TabsTrigger value="concierge" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Sparkles className="h-3.5 w-3.5 mr-1.5" />Concierge</TabsTrigger>
+              <TabsTrigger value="map" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><MapIcon className="h-3.5 w-3.5 mr-1.5" />Map</TabsTrigger>
               <TabsTrigger value="admin" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Settings className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
               <TabsTrigger value="integrations" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Building2 className="h-3.5 w-3.5 mr-1.5" />Integrations</TabsTrigger>
             </TabsList>
@@ -966,6 +1018,8 @@ function App() {
           </section>
         </>
       )}
+
+      {tab === 'map' && <MapView />}
 
       {tab === 'admin' && (
         <section className="max-w-7xl mx-auto px-6 py-8">

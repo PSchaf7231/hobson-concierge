@@ -76,6 +76,29 @@ async function ensureSeed(db) {
   }
 }
 
+// City-level geocode lookup (lat, lng) — used to plot test properties on the map
+// IDX feeds will provide native lat/lng so this is just a fallback for seeded data
+const CITY_GEO = {
+  'malibu,CA':[34.0259,-118.7798],'naples,FL':[26.142,-81.7948],'lake tahoe,NV':[39.0968,-120.0324],
+  'new york,NY':[40.7831,-73.9712],'napa,CA':[38.2975,-122.2869],'scottsdale,AZ':[33.4942,-111.9261],
+  'san francisco,CA':[37.7749,-122.4194],'los angeles,CA':[34.0522,-118.2437],'houston,TX':[29.7604,-95.3698],
+  'phoenix,AZ':[33.4484,-112.0740],'boca raton,FL':[26.3683,-80.1289],'palm beach,FL':[26.7056,-80.0364],
+  'miami beach,FL':[25.7907,-80.1300],'beverly hills,CA':[34.0736,-118.4004],'aspen,CO':[39.1911,-106.8175],
+  'southampton,NY':[40.8843,-72.3895],'greenwich,CT':[41.0262,-73.6282],'austin,TX':[30.2672,-97.7431],
+  'nashville,TN':[36.1627,-86.7816],'charleston,SC':[32.7765,-79.9311],'la jolla,CA':[32.8328,-117.2713],
+  'park city,UT':[40.6461,-111.4980],'chicago,IL':[41.8781,-87.6298],'jackson,WY':[43.4799,-110.7624],
+  'dallas,TX':[32.7767,-96.7970],'atlanta,GA':[33.7490,-84.3880],'charlotte,NC':[35.2271,-80.8431],
+  'tampa,FL':[27.9506,-82.4572],'denver,CO':[39.7392,-104.9903],'brooklyn,NY':[40.6782,-73.9442]
+}
+
+function withGeo(p) {
+  if (p.lat && p.lng) return p
+  const key = `${(p.city || '').toLowerCase()},${p.state || ''}`
+  const g = CITY_GEO[key]
+  if (g) return { ...p, lat: g[0], lng: g[1] }
+  return p
+}
+
 // ============= PERSONAS (brand-aware) =============
 const PERSONAS = {
   residential: {
@@ -386,7 +409,7 @@ async function handleRoute(request, { params }) {
     // ---------- PROPERTIES ----------
     if (route === '/properties' && method === 'GET') {
       const list = await db.collection('properties').find({}).toArray()
-      return handleCORS(NextResponse.json(list.map(({ _id, ...r }) => r)))
+      return handleCORS(NextResponse.json(list.map(({ _id, ...r }) => withGeo(r))))
     }
 
     // ---------- CHAT ----------
