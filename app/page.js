@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon } from 'lucide-react'
+import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2 } from 'lucide-react'
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-[640px] flex items-center justify-center bg-[#F5EDE0] border border-[#C9A867]/30 rounded text-[#1B3A4F]/60">Loading map…</div> })
 
@@ -30,7 +30,7 @@ function BrandHeader({ persona }) {
     <div className="flex items-center gap-4 min-w-0">
       <img src={logo} alt={brandName} className="h-16 w-16 object-contain flex-shrink-0" />
       <div className="min-w-0">
-        <div className="text-[9px] uppercase tracking-[0.25em] text-[#C8CCD1]/60 whitespace-nowrap">Powered by Atlas AI</div>
+        <div className="text-[9px] uppercase tracking-[0.25em] text-[#C8CCD1]/60 whitespace-nowrap">Powered by Hobson AI</div>
         <div className="font-serif text-[#E2C285] text-xl leading-tight whitespace-nowrap">{brandName}</div>
       </div>
     </div>
@@ -107,7 +107,7 @@ function PropertyDetailDialog({ property, open, onOpenChange, isFavorite, onTogg
               <div className="text-center">
                 <TrendingUp className="h-5 w-5 text-[#C9A867] mx-auto" />
                 <div className="text-lg font-semibold text-[#1B3A4F] mt-1">${(p.noi/1000).toFixed(0)}K</div>
-                <div className="text-[10px] uppercase tracking-wider text-[#1B3A4F]/60">Annual NOI</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#1B3A4F]/60">Hnnual NOI</div>
               </div>
             )}
             {p.zoning && !p.noi && (
@@ -153,7 +153,7 @@ function PropertyDetailDialog({ property, open, onOpenChange, isFavorite, onTogg
           </a>
           {onAskAtlas && (
             <Button onClick={() => { onAskAtlas(p); onOpenChange(false) }} className="bg-[#1B3A4F] hover:bg-[#1B3A4F]/90 text-[#E2C285]">
-              <Calendar className="h-4 w-4 mr-2" />Ask Atlas to schedule a showing
+              <Calendar className="h-4 w-4 mr-2" />Hsk Hobson to schedule a showing
             </Button>
           )}
         </DialogFooter>
@@ -216,6 +216,9 @@ function ChatPanel() {
   const [leadScore, setLeadScore] = useState(null)
   const [listening, setListening] = useState(false)
   const [viewProperty, setViewProperty] = useState(null)
+  const [speakingIdx, setSpeakingIdx] = useState(null)
+  const [voiceError, setVoiceError] = useState(null)
+  const audioRef = useRef(null)
   const recognitionRef = useRef(null)
   const scrollRef = useRef(null)
 
@@ -260,9 +263,39 @@ function ChatPanel() {
     else { setInput(''); r.start(); setListening(true) }
   }
 
+  async function playVoice(text, idx) {
+    setVoiceError(null)
+    if (audioRef.current) { try { audioRef.current.pause() } catch (e) {} }
+    if (speakingIdx === idx) { setSpeakingIdx(null); return }
+    setSpeakingIdx(idx)
+    try {
+      const res = await fetch('/api/voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        setVoiceError(err.error || 'voice unavailable')
+        setSpeakingIdx(null)
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.onended = () => { setSpeakingIdx(null); URL.revokeObjectURL(url) }
+      audio.onerror = () => { setSpeakingIdx(null); setVoiceError('playback error') }
+      await audio.play()
+    } catch (e) {
+      setVoiceError(e.message)
+      setSpeakingIdx(null)
+    }
+  }
+
   const greeting = persona === 'residential'
-    ? "Welcome to Anasa Collection. I'm Atlas — your personal concierge. Tell me what you're dreaming of — the city, the lifestyle, the must-haves — and I'll curate exceptional homes for you."
-    : "Welcome to Next Endeavor CRE. I'm Atlas — your acquisition advisor. Share your mandate — asset class, geography, check size, target yield — and I'll surface investment-grade opportunities."
+    ? "Welcome to The Anasa Collection. I am Hobson. Whom may I have the pleasure of assisting today? And tell me, sir — what does the right home feel like?"
+    : "Next Endeavor CRE. Hobson at your service. Whom shall I have the honor of representing today? A few particulars on the mandate, and I'll have something worth your time."
 
   async function send(text) {
     const msg = (text ?? input).trim()
@@ -340,7 +373,7 @@ function ChatPanel() {
         {messages.length === 0 && (
           <>
             <div className="flex gap-2">
-              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">A</div>
+              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">H</div>
               <div className="bg-white border border-[#C8CCD1]/40 rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[85%] text-sm leading-relaxed text-[#1B3A4F]">{greeting}</div>
             </div>
             <div className="flex flex-wrap gap-2 pl-9 pt-2">
@@ -354,15 +387,24 @@ function ChatPanel() {
         )}
         {messages.map((m, i) => (
           <div key={i} className={`flex gap-2 ${m.role === 'user' ? 'justify-end' : ''}`}>
-            {m.role === 'assistant' && <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">A</div>}
-            <div className={`rounded-2xl px-4 py-2.5 max-w-[85%] text-sm leading-relaxed whitespace-pre-wrap ${m.role === 'user' ? 'bg-[#1B3A4F] text-white rounded-tr-sm' : 'bg-white border border-[#C8CCD1]/40 rounded-tl-sm text-[#1B3A4F]'}`}>
+            {m.role === 'assistant' && <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">H</div>}
+            <div className={`rounded-2xl px-4 py-2.5 max-w-[85%] text-sm leading-relaxed whitespace-pre-wrap relative group ${m.role === 'user' ? 'bg-[#1B3A4F] text-white rounded-tr-sm' : 'bg-white border border-[#C8CCD1]/40 rounded-tl-sm text-[#1B3A4F]'}`}>
               {m.content}
+              {m.role === 'assistant' && (
+                <button
+                  onClick={() => playVoice(m.content, i)}
+                  className="ml-2 inline-flex items-center justify-center h-6 w-6 rounded-full hover:bg-[#C9A867]/20 transition align-middle"
+                  title={speakingIdx === i ? 'Stop' : 'Hear Hobson speak'}
+                >
+                  {speakingIdx === i ? <Loader2 className="h-3.5 w-3.5 text-[#C9A867] animate-spin" /> : <Volume2 className="h-3.5 w-3.5 text-[#C9A867]/60 hover:text-[#C9A867]" />}
+                </button>
+              )}
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex gap-2">
-            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">A</div>
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">H</div>
             <div className="bg-white border border-[#C8CCD1]/40 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm">
               <span className="inline-flex gap-1">
                 <span className="h-2 w-2 rounded-full bg-[#C9A867] animate-bounce" />
@@ -413,7 +455,7 @@ function ChatPanel() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-          placeholder={listening ? 'Listening…' : 'Tell Atlas what you\'re looking for…'}
+          placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'}
           className="flex-1 border-[#C8CCD1] focus-visible:ring-[#C9A867]"
           disabled={loading}
         />
@@ -509,13 +551,13 @@ function AdminDashboard() {
         {/* Lead list */}
         <Card className="lg:col-span-1 p-0 overflow-hidden border-[#C8CCD1]/40">
           <div className="px-4 py-3 border-b bg-[#1B3A4F] text-[#E2C285] font-semibold text-sm flex items-center justify-between">
-            <span className="flex items-center gap-2"><MessageSquare className="h-4 w-4" />Active Conversations</span>
+            <span className="flex items-center gap-2"><MessageSquare className="h-4 w-4" />Hctive Conversations</span>
             <Select value={filterTier} onValueChange={setFilterTier}>
               <SelectTrigger className="h-7 w-[110px] text-xs bg-white/10 border-white/20 text-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="all">Hll</SelectItem>
                 <SelectItem value="hot">🔥 Hot</SelectItem>
                 <SelectItem value="warm">Warm</SelectItem>
                 <SelectItem value="cold">Cold</SelectItem>
@@ -566,7 +608,7 @@ function AdminDashboard() {
                   ))}
                 </div>
                 <div className="p-2 border-t border-[#C8CCD1]/40 bg-white flex gap-2">
-                  <Input value={adminMsg} onChange={e => setAdminMsg(e.target.value)} placeholder="Override Atlas — write as broker…" className="text-xs h-8 border-[#C8CCD1]" />
+                  <Input value={adminMsg} onChange={e => setAdminMsg(e.target.value)} placeholder="Override Hobson — write as broker…" className="text-xs h-8 border-[#C8CCD1]" />
                   <Button size="sm" onClick={() => { if (adminMsg.trim()) { updateSession({ adminMessage: adminMsg }); setAdminMsg('') } }} className="bg-[#1B3A4F] hover:bg-[#1B3A4F]/90 text-[#E2C285]">Send</Button>
                 </div>
               </div>
@@ -638,7 +680,7 @@ function AdminDashboard() {
 
                 {selected.recommendedProperties?.length > 0 && (
                   <div>
-                    <div className="text-xs uppercase tracking-widest text-[#1B3A4F]/50 mb-1">Atlas Recommendations</div>
+                    <div className="text-xs uppercase tracking-widest text-[#1B3A4F]/50 mb-1">Hobson Recommendations</div>
                     <div className="space-y-2">
                       {selected.recommendedProperties.map(p => (
                         <div key={p.id} className="flex gap-2 border border-[#C8CCD1]/40 rounded p-2">
@@ -736,7 +778,7 @@ function IntegrationsPanel() {
     {
       id: 'idx',
       title: 'IDX / MLS Feed (RESO Web API)',
-      subtitle: 'Pull live listings from your MLS into Atlas',
+      subtitle: 'Pull live listings from your MLS into Hobson',
       status: settings.idx?.enabled && settings.idx?.feedUrl ? `Synced ${settings.idx.propertyCount || 0} listings` : 'Not configured',
       fields: [
         { key: 'feedUrl', label: 'RESO Web API base URL', placeholder: 'https://api.mlsgrid.com/v2', type: 'text' },
@@ -752,7 +794,7 @@ function IntegrationsPanel() {
     {
       id: 'resend',
       title: 'Resend (Email alerts)',
-      subtitle: 'Email yourself when Atlas qualifies a HOT lead',
+      subtitle: 'Email yourself when Hobson qualifies a HOT lead',
       status: settings.resend?.enabled ? 'Configured' : 'Not configured',
       fields: [
         { key: 'apiKey', label: 'Resend API key', placeholder: 're_...', type: 'password' },
@@ -763,8 +805,8 @@ function IntegrationsPanel() {
     },
     {
       id: 'elevenlabs',
-      title: 'ElevenLabs (Atlas speaks)',
-      subtitle: 'Premium voice responses from Atlas',
+      title: 'ElevenLabs (Hobson speaks)',
+      subtitle: 'Premium voice responses from Hobson',
       status: settings.elevenlabs?.enabled ? 'Configured' : 'Not configured',
       fields: [
         { key: 'apiKey', label: 'ElevenLabs API key', placeholder: 'sk_...', type: 'password' },
@@ -876,7 +918,7 @@ function MapView() {
           <p className="text-[#1B3A4F]/60 text-sm mt-1">{counts.all} active listings · Click any pin for full details</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setFilter('all')} className={`text-xs px-3 py-1.5 rounded border transition ${filter==='all' ? 'bg-[#1B3A4F] text-[#E2C285] border-[#1B3A4F]' : 'border-[#C8CCD1] text-[#1B3A4F] hover:border-[#C9A867]'}`}>All ({counts.all})</button>
+          <button onClick={() => setFilter('all')} className={`text-xs px-3 py-1.5 rounded border transition ${filter==='all' ? 'bg-[#1B3A4F] text-[#E2C285] border-[#1B3A4F]' : 'border-[#C8CCD1] text-[#1B3A4F] hover:border-[#C9A867]'}`}>Hll ({counts.all})</button>
           <button onClick={() => setFilter('residential')} className={`text-xs px-3 py-1.5 rounded border transition flex items-center gap-1.5 ${filter==='residential' ? 'bg-[#C9A867] text-[#1B3A4F] border-[#C9A867]' : 'border-[#C8CCD1] text-[#1B3A4F] hover:border-[#C9A867]'}`}>
             <span className="h-2 w-2 rounded-full bg-[#C9A867] inline-block" />The Anasa Collection ({counts.residential})
           </button>
@@ -913,7 +955,7 @@ function App() {
             </div>
             <div className="hidden md:block border-l border-white/15 pl-5">
               <div className="text-[9px] uppercase tracking-[0.3em] text-[#C8CCD1]/70 whitespace-nowrap">Concierge Platform</div>
-              <div className="text-base font-serif text-[#E2C285] mt-0.5">Powered by Atlas AI</div>
+              <div className="text-base font-serif text-[#E2C285] mt-0.5">Powered by Hobson AI</div>
             </div>
           </div>
           <Tabs value={tab} onValueChange={setTab}>
@@ -939,7 +981,7 @@ function App() {
               <div className="lg:col-span-2 text-white space-y-7 pt-4">
                 <div className="flex items-center gap-3">
                   <div className="h-px w-12 bg-[#C9A867]" />
-                  <span className="text-[#E2C285] text-[11px] uppercase tracking-[0.32em] font-medium">An Atlas-Powered Concierge</span>
+                  <span className="text-[#E2C285] text-[11px] uppercase tracking-[0.32em] font-medium">A Hobson-Powered Concierge</span>
                 </div>
                 <h1 className="font-serif text-5xl lg:text-6xl leading-[1.05] text-[#F5EDE0]">
                   Precision in <span className="italic text-[#E2C285]">Commercial</span> Investment.
@@ -947,10 +989,10 @@ function App() {
                   Elegance in <span className="italic text-[#E2C285]">Luxury</span> Living.
                 </h1>
                 <p className="text-[#F5EDE0]/80 text-lg leading-relaxed font-light max-w-lg">
-                  <span className="text-[#E2C285] font-medium">Atlas</span> is your always-on AI concierge — qualifying leads, learning their tastes, and curating properties autonomously. Two brands. One intelligent agent. You step in only to close.
+                  <span className="text-[#E2C285] font-medium">Hobson</span> is your always-on AI concierge — qualifying leads, learning their tastes, and curating properties autonomously. Two brands. One impeccable agent. You step in only to close.
                 </p>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">Claude Sonnet 4</Badge>
+                  <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">Bespoke Concierge AI</Badge>
                   <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">Memory &amp; preference learning</Badge>
                   <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">Voice enabled</Badge>
                   <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">IDX/MLS ready</Badge>
@@ -981,11 +1023,11 @@ function App() {
             <div className="text-center mb-10">
               <div className="flex items-center gap-3 justify-center mb-3">
                 <div className="h-px w-12 bg-[#C9A867]" />
-                <span className="text-[#1B3A4F]/60 text-xs uppercase tracking-[0.3em]">One Atlas · Two Brands</span>
+                <span className="text-[#1B3A4F]/60 text-xs uppercase tracking-[0.3em]">One Hobson · Two Brands</span>
                 <div className="h-px w-12 bg-[#C9A867]" />
               </div>
               <h2 className="text-3xl font-serif text-[#1B3A4F]">Tailored intelligence for every client.</h2>
-              <p className="text-[#1B3A4F]/60 mt-2 font-light">Toggle the brand persona at any time — Atlas adapts its voice, criteria, and curation instantly.</p>
+              <p className="text-[#1B3A4F]/60 mt-2 font-light">Toggle the brand persona at any time — Hobson adapts his voice, criteria, and curation instantly.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="p-6 border-[#C9A867]/40 bg-gradient-to-br from-white via-white to-[#C9A867]/5 hover:border-[#C9A867] transition-all hover:shadow-xl">
@@ -994,7 +1036,7 @@ function App() {
                   <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Residential Luxury</Badge>
                 </div>
                 <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">The Anasa Collection</h3>
-                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Atlas speaks the language of lifestyle. Warm, evocative, attuned to the way you want to live — schools, views, privacy, prestige. Curates trophy listings that fit.</p>
+                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Hobson speaks the language of lifestyle. Refined, observant, attuned to the way you want to live — schools, views, privacy, prestige. Curates trophy listings that fit.</p>
                 <ul className="text-sm mt-4 space-y-1.5 text-[#1B3A4F]/80">
                   <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Captures buyer aspirations &amp; lifestyle</li>
                   <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Tracks budget, beds/baths, amenities</li>
@@ -1007,7 +1049,7 @@ function App() {
                   <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Commercial Real Estate</Badge>
                 </div>
                 <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">Next Endeavor CRE</h3>
-                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Atlas pivots to analyst mode. Sharp, financial, deal-focused. Qualifies the principal, deal size, and target cap rate — surfaces investment-grade assets.</p>
+                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Hobson pivots to analyst mode. Sharp, financial, deal-focused. Qualifies the principal, deal size, and target cap rate — surfaces investment-grade assets.</p>
                 <ul className="text-sm mt-4 space-y-1.5 text-[#1B3A4F]/80">
                   <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Captures mandate &amp; firm details</li>
                   <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Tracks cap rate, NOI, sq ft, zoning</li>
@@ -1026,7 +1068,7 @@ function App() {
           <div className="mb-6 flex items-start justify-between">
             <div>
               <h1 className="text-3xl font-serif text-[#1B3A4F]">Broker Dashboard</h1>
-              <p className="text-[#1B3A4F]/60 text-sm mt-1">Monitor Atlas in real time · Override · Pipeline management</p>
+              <p className="text-[#1B3A4F]/60 text-sm mt-1">Monitor Hobson in real time · Override · Pipeline management</p>
             </div>
             <div className="text-xs text-[#1B3A4F]/50">Auto-refreshes every 5s</div>
           </div>
@@ -1038,7 +1080,7 @@ function App() {
         <section className="max-w-5xl mx-auto px-6 py-8">
           <div className="mb-6">
             <h1 className="text-3xl font-serif text-[#1B3A4F]">Integrations</h1>
-            <p className="text-[#1B3A4F]/60 text-sm mt-1">Connect Bold Trail, your MLS IDX feed, Resend, and ElevenLabs. Atlas activates each one the moment a valid key is saved.</p>
+            <p className="text-[#1B3A4F]/60 text-sm mt-1">Connect Bold Trail, your MLS IDX feed, Resend, and ElevenLabs. Hobson activates each one the moment a valid key is saved.</p>
           </div>
           <IntegrationsPanel />
         </section>
@@ -1051,7 +1093,7 @@ function App() {
             <span className="opacity-40 font-serif italic">×</span>
             <img src={LOGOS.commercial} alt="" className="h-9 w-9 object-contain" />
           </div>
-          <div className="opacity-60">Powered by Atlas AI · Claude Sonnet 4</div>
+          <div className="opacity-60">Powered by Hobson AI · Bespoke Real Estate Advisory</div>
         </div>
       </footer>
     </div>
