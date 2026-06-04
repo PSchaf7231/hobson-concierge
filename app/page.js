@@ -946,12 +946,12 @@ function App() {
     <div className="min-h-screen bg-[#F5EDE0] font-sans">
       {/* Top Nav */}
       <header className="sticky top-0 z-30 backdrop-blur bg-[#1B3A4F]/95 border-b border-[#C9A867]/20 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-4">
-              <img src={LOGOS.residential} alt="The Anasa Collection" className="h-16 w-24 object-contain" />
-              <span className="text-lg text-[#E2C285]/40 font-serif italic">×</span>
-              <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-16 w-16 object-contain" />
+        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <img src={LOGOS.residential} alt="The Anasa Collection" className="h-11 w-16 object-contain" />
+              <span className="text-sm text-[#E2C285]/40 font-serif italic">×</span>
+              <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-11 w-11 object-contain" />
             </div>
           </div>
           <Tabs value={tab} onValueChange={setTab}>
