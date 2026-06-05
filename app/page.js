@@ -638,10 +638,6 @@ function AdminDashboard() {
     setStats(statsRes)
   }
   useEffect(() => { load() }, [])
-  useEffect(() => {
-    const t = setInterval(load, 5000)
-    return () => clearInterval(t)
-  }, [])
 
   async function loadSession(id) {
     const r = await fetch(`/api/sessions/${id}`).then(r => r.json())
