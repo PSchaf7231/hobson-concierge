@@ -294,11 +294,26 @@ function ChatPanel() {
     recognitionRef.current = r
   }, [voiceMode])
 
-  function toggleMic() {
+  async function toggleMic() {
     const r = recognitionRef.current
-    if (!r) { alert('Voice not supported in this browser. Try Chrome.'); return }
-    if (listening) { r.stop(); setListening(false) }
-    else { setInput(''); r.start(); setListening(true) }
+    if (!r) { alert('Voice input requires Chrome or Edge browser. Try opening in Chrome.'); return }
+    if (listening) { try { r.stop() } catch (e) {} ; setListening(false); return }
+    // Force the browser permission prompt explicitly
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+      }
+    } catch (permErr) {
+      alert('Microphone permission denied. Click the lock/camera icon in your browser address bar and allow microphone, then try again.')
+      return
+    }
+    setInput('')
+    try {
+      r.start()
+      setListening(true)
+    } catch (e) {
+      alert('Could not start microphone. Make sure you are using Chrome and have granted mic permission. (' + e.message + ')')
+    }
   }
 
   async function playVoice(text, idx) {
