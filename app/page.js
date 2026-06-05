@@ -439,6 +439,32 @@ function ChatPanel() {
             </div>
           </>
         )}
+
+        {recommended.length > 0 && (
+          <div className="pt-1 pb-2">
+            <div className="text-xs font-semibold text-[#1B3A4F] pl-9 pb-2 flex items-center gap-1.5 tracking-wide uppercase"><Sparkles className="h-3.5 w-3.5 text-[#C9A867]" />Curated for you</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-9">
+              {recommended.map(p => <PropertyCard key={p.id} p={p} isFavorite={favIds.has(p.id)} onToggleFavorite={toggleFavorite} onView={setViewProperty} persona={persona} />)}
+            </div>
+          </div>
+        )}
+
+        {favorites.length > 0 && (
+          <div className="pt-2">
+            <div className="flex items-center justify-between pl-9 pb-2">
+              <div className="text-xs font-semibold text-[#1B3A4F] flex items-center gap-1.5 tracking-wide uppercase"><Heart className="h-3.5 w-3.5 fill-[#C9A867] text-[#C9A867]" />My Shortlist ({favorites.length})</div>
+              {sessionId && (
+                <a href={`/shortlist/${sessionId}`} target="_blank" className="text-xs text-[#C9A867] hover:underline font-medium flex items-center gap-1">
+                  Open shareable view →
+                </a>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-9">
+              {favorites.map(p => <PropertyCard key={'f'+p.id} p={p} isFavorite={true} onToggleFavorite={toggleFavorite} onView={setViewProperty} persona={persona} />)}
+            </div>
+          </div>
+        )}
+
         {messages.map((m, i) => (
           <div key={i} className={`flex gap-2 ${m.role === 'user' ? 'justify-end' : ''}`}>
             {m.role === 'assistant' && <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">H</div>}
@@ -469,30 +495,19 @@ function ChatPanel() {
           </div>
         )}
 
-        {recommended.length > 0 && (
-          <div className="pt-3">
-            <div className="text-xs font-semibold text-[#1B3A4F] pl-9 pb-2 flex items-center gap-1.5 tracking-wide uppercase"><Sparkles className="h-3.5 w-3.5 text-[#C9A867]" />Curated for you</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-9">
-              {recommended.map(p => <PropertyCard key={p.id} p={p} isFavorite={favIds.has(p.id)} onToggleFavorite={toggleFavorite} onView={setViewProperty} persona={persona} />)}
+        {loading && (
+          <div className="flex gap-2">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">H</div>
+            <div className="bg-white border border-[#C8CCD1]/40 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm">
+              <span className="inline-flex gap-1">
+                <span className="h-2 w-2 rounded-full bg-[#C9A867] animate-bounce" />
+                <span className="h-2 w-2 rounded-full bg-[#C9A867] animate-bounce" style={{ animationDelay: '120ms' }} />
+                <span className="h-2 w-2 rounded-full bg-[#C9A867] animate-bounce" style={{ animationDelay: '240ms' }} />
+              </span>
             </div>
           </div>
         )}
 
-        {favorites.length > 0 && (
-          <div className="pt-4">
-            <div className="flex items-center justify-between pl-9 pb-2">
-              <div className="text-xs font-semibold text-[#1B3A4F] flex items-center gap-1.5 tracking-wide uppercase"><Heart className="h-3.5 w-3.5 fill-[#C9A867] text-[#C9A867]" />My Shortlist ({favorites.length})</div>
-              {sessionId && (
-                <a href={`/shortlist/${sessionId}`} target="_blank" className="text-xs text-[#C9A867] hover:underline font-medium flex items-center gap-1">
-                  Open shareable view →
-                </a>
-              )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-9">
-              {favorites.map(p => <PropertyCard key={'f'+p.id} p={p} isFavorite={true} onToggleFavorite={toggleFavorite} onView={setViewProperty} persona={persona} />)}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Input */}

@@ -204,7 +204,7 @@ ${SCORING_RUBRIC}
 
 OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
 {
-  "reply": "<your conversational message to user>",
+  "reply": "<your conversational message — KEEP IT SHORT: 1-3 short sentences MAX. Hobson is concise, not chatty. No long paragraphs. Ever.>",
   "lead": { "name": null|string, "email": null|string, "phone": null|string, "company": null|string },
   "preferences": { "location": null|string, "budget_min": null|number, "budget_max": null|number, "asset_type": null|string, "beds": null|number, "baths": null|number, "amenities": [], "timeline": null|string, "cap_rate_target": null|number, "zoning": null|string, "notes": null|string },
   "recommended_ids": ["p1", ...],
