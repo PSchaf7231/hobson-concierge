@@ -298,15 +298,6 @@ function ChatPanel() {
     const r = recognitionRef.current
     if (!r) { alert('Voice input requires Chrome or Edge browser. Try opening in Chrome.'); return }
     if (listening) { try { r.stop() } catch (e) {} ; setListening(false); return }
-    // Force the browser permission prompt explicitly
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true })
-      }
-    } catch (permErr) {
-      alert('Microphone permission denied. Click the lock/camera icon in your browser address bar and allow microphone, then try again.')
-      return
-    }
     setInput('')
     try {
       r.start()
