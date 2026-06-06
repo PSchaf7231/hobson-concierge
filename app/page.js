@@ -1114,8 +1114,8 @@ function App() {
               <img src={HERO_IMG} className="w-full h-full object-cover" alt="" />
               <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A4F]/95 via-[#264B62]/85 to-[#1B3A4F]/60" />
             </div>
-            <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-5 gap-12 items-start">
-              <div className="lg:col-span-2 text-white space-y-7 pt-4">
+            <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-12 gap-8 items-center">
+              <div className="lg:col-span-5 text-white space-y-7 pt-4">
                 <div className="flex items-center gap-3">
                   <div className="h-px w-12 bg-[#C9A867]" />
                   <span className="text-[#E2C285] text-[11px] uppercase tracking-[0.32em] font-medium">A Hobson-Powered Concierge</span>
@@ -1148,18 +1148,18 @@ function App() {
                     <div className="text-[10px] text-[#F5EDE0]/60 uppercase tracking-[0.2em] mt-1">Lead scoring</div>
                   </div>
                 </div>
-
-                {/* Hobson Voice Orb */}
-                <div className="pt-8 flex flex-col items-center lg:items-start">
-                  <HobsonOrb
-                    size={200}
-                    state="idle"
-                    onClick={() => window.dispatchEvent(new Event('hobson:open-voice'))}
-                    label="Tap to speak with Hobson"
-                  />
-                </div>
               </div>
-              <div className="lg:col-span-3">
+
+              {/* Hobson Voice Orb — middle column, beside the chat box */}
+              <div className="lg:col-span-1 hidden lg:flex flex-col items-center justify-center">
+                <HobsonOrb
+                  size={140}
+                  state="idle"
+                  onClick={() => window.dispatchEvent(new Event('hobson:open-voice'))}
+                  label="Tap to talk"
+                />
+              </div>
+              <div className="lg:col-span-6">
                 <ChatPanel />
               </div>
             </div>
