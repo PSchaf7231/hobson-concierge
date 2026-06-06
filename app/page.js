@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2 } from 'lucide-react'
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-[640px] flex items-center justify-center bg-[#F5EDE0] border border-[#C9A867]/30 rounded text-[#1B3A4F]/60">Loading map…</div> })
+const HobsonOrb = dynamic(() => import('@/components/HobsonOrb'), { ssr: false })
 
 // ============ BRAND ASSETS ============
 const LOGOS = {
@@ -228,6 +229,18 @@ function ChatPanel() {
     if (existing) setSessionId(existing)
   }, [])
 
+  // External orb trigger → open full-screen voice mode
+  useEffect(() => {
+    const open = () => {
+      setVoiceMode(true)
+      setTimeout(() => {
+        try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
+      }, 350)
+    }
+    window.addEventListener('hobson:open-voice', open)
+    return () => window.removeEventListener('hobson:open-voice', open)
+  }, [])
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading, recommended])
@@ -412,26 +425,7 @@ function ChatPanel() {
         </div>
       </div>
 
-      {/* Voice Mode CTA — Orb */}
-      <div className="w-full flex items-center justify-center gap-3 py-3 bg-gradient-to-b from-[#1B3A4F] to-[#0F2533] border-t border-b border-[#C9A867]/30">
-        <button
-          onClick={() => {
-            setVoiceMode(true)
-            setTimeout(() => {
-              try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
-            }, 300)
-          }}
-          aria-label="Talk to Hobson"
-          className="relative flex items-center justify-center group"
-        >
-          <span className="absolute h-12 w-12 rounded-full bg-[#C9A867]/20 animate-ping" />
-          <span className="absolute h-10 w-10 rounded-full bg-[#C9A867]/30 animate-pulse" />
-          <span className="relative h-9 w-9 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] shadow-lg shadow-[#C9A867]/30 group-hover:scale-110 transition flex items-center justify-center">
-            <Mic className="h-4 w-4 text-[#1B3A4F]" />
-          </span>
-        </button>
-        <span className="text-[#E2C285] text-xs tracking-[0.2em] uppercase font-medium">Tap orb to talk to Hobson</span>
-      </div>
+      {/* (Voice CTA moved to hero left column — see HobsonOrb) */}
 
       {/* Messages */}
       <div ref={scrollRef} className="h-[440px] overflow-y-auto px-4 py-4 bg-gradient-to-b from-[#F5EDE0] to-white space-y-3">
@@ -1153,6 +1147,16 @@ function App() {
                     <div className="text-3xl font-serif text-[#E2C285]">Auto</div>
                     <div className="text-[10px] text-[#F5EDE0]/60 uppercase tracking-[0.2em] mt-1">Lead scoring</div>
                   </div>
+                </div>
+
+                {/* Hobson Voice Orb */}
+                <div className="pt-8 flex flex-col items-center lg:items-start">
+                  <HobsonOrb
+                    size={200}
+                    state="idle"
+                    onClick={() => window.dispatchEvent(new Event('hobson:open-voice'))}
+                    label="Tap to speak with Hobson"
+                  />
                 </div>
               </div>
               <div className="lg:col-span-3">
