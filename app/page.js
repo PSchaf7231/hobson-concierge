@@ -412,21 +412,26 @@ function ChatPanel() {
         </div>
       </div>
 
-      {/* Voice Mode CTA Banner */}
-      <button
-        onClick={() => {
-          setVoiceMode(true)
-          setTimeout(() => {
-            try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
-          }, 300)
-        }}
-        className="w-full px-4 py-3 bg-gradient-to-r from-[#C9A867] via-[#E2C285] to-[#C9A867] text-[#1B3A4F] font-semibold text-sm flex items-center justify-center gap-2 hover:brightness-105 transition group relative overflow-hidden"
-      >
-        <span className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition" />
-        <Mic className="h-4 w-4 relative" />
-        <span className="relative tracking-wide">Talk to Hobson — Voice Conversation</span>
-        <span className="h-2 w-2 rounded-full bg-[#1B3A4F]/70 animate-pulse relative" />
-      </button>
+      {/* Voice Mode CTA — Orb */}
+      <div className="w-full flex items-center justify-center gap-3 py-3 bg-gradient-to-b from-[#1B3A4F] to-[#0F2533] border-t border-b border-[#C9A867]/30">
+        <button
+          onClick={() => {
+            setVoiceMode(true)
+            setTimeout(() => {
+              try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
+            }, 300)
+          }}
+          aria-label="Talk to Hobson"
+          className="relative flex items-center justify-center group"
+        >
+          <span className="absolute h-12 w-12 rounded-full bg-[#C9A867]/20 animate-ping" />
+          <span className="absolute h-10 w-10 rounded-full bg-[#C9A867]/30 animate-pulse" />
+          <span className="relative h-9 w-9 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] shadow-lg shadow-[#C9A867]/30 group-hover:scale-110 transition flex items-center justify-center">
+            <Mic className="h-4 w-4 text-[#1B3A4F]" />
+          </span>
+        </button>
+        <span className="text-[#E2C285] text-xs tracking-[0.2em] uppercase font-medium">Tap orb to talk to Hobson</span>
+      </div>
 
       {/* Messages */}
       <div ref={scrollRef} className="h-[440px] overflow-y-auto px-4 py-4 bg-gradient-to-b from-[#F5EDE0] to-white space-y-3">
