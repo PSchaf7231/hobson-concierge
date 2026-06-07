@@ -180,21 +180,21 @@ export default function HobsonOrb({ size = 180, state = 'idle', onClick, label }
   }, [])
 
   return (
-    <div className="flex flex-col items-center select-none">
+    <span className="inline-flex flex-col items-center select-none align-middle">
       <button
         type="button"
         onClick={onClick}
         aria-label={label || 'Talk to Hobson'}
-        className="relative rounded-full cursor-pointer transition-transform hover:scale-[1.04] focus:outline-none"
+        className="relative rounded-full cursor-pointer transition-transform hover:scale-[1.04] focus:outline-none inline-block align-middle"
         style={{ width: size, height: size }}
       >
         <canvas ref={canvasRef} className="w-full h-full rounded-full block" />
       </button>
       {label && (
-        <div className="mt-3 text-[11px] tracking-[0.28em] uppercase text-[#7ab8f5]/80 font-medium">
+        <span className="mt-3 block text-[11px] tracking-[0.28em] uppercase text-[#7ab8f5]/80 font-medium">
           {label}
-        </div>
+        </span>
       )}
-    </div>
+    </span>
   )
 }

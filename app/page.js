@@ -13,6 +13,7 @@ import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, M
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-[640px] flex items-center justify-center bg-[#F5EDE0] border border-[#C9A867]/30 rounded text-[#1B3A4F]/60">Loading map…</div> })
 const HobsonOrb = dynamic(() => import('@/components/HobsonOrb'), { ssr: false })
+const MicroOrb = dynamic(() => import('@/components/MicroOrb'), { ssr: false })
 
 // ============ BRAND ASSETS ============
 const LOGOS = {
@@ -220,37 +221,64 @@ function ChatPanel() {
   const [speakingIdx, setSpeakingIdx] = useState(null)
   const [voiceError, setVoiceError] = useState(null)
   const [voiceMode, setVoiceMode] = useState(false)
+  const [orbActive, setOrbActive] = useState(false)
+  const [orbSpeaking, setOrbSpeaking] = useState(false)
   const audioRef = useRef(null)
   const recognitionRef = useRef(null)
   const scrollRef = useRef(null)
+
+  // Broadcast orb state to MicroOrb (idle | listening | thinking | speaking)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let s = 'idle'
+    if (orbActive) {
+      if (orbSpeaking) s = 'speaking'
+      else if (loading) s = 'thinking'
+      else if (listening) s = 'listening'
+      else s = 'idle'
+    }
+    window.dispatchEvent(new CustomEvent('hobson:state', { detail: s }))
+  }, [orbActive, listening, loading, orbSpeaking])
 
   useEffect(() => {
     const existing = typeof window !== 'undefined' ? localStorage.getItem('atlas_session') : null
     if (existing) setSessionId(existing)
   }, [])
 
-  // External orb trigger → open full-screen voice mode
+  // Micro-orb toggle → INLINE voice conversation (no overlay)
   useEffect(() => {
-    const open = () => {
-      setVoiceMode(true)
-      setTimeout(() => {
-        try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
-      }, 350)
+    const toggle = () => {
+      setOrbActive((prev) => {
+        if (prev) {
+          // Stop everything
+          try { recognitionRef.current?.stop() } catch (e) {}
+          try { audioRef.current?.pause() } catch (e) {}
+          setListening(false)
+          setOrbSpeaking(false)
+          return false
+        } else {
+          // Start listening
+          setTimeout(() => {
+            try { recognitionRef.current?.start(); setListening(true) } catch (e) {}
+          }, 200)
+          return true
+        }
+      })
     }
-    window.addEventListener('hobson:open-voice', open)
-    return () => window.removeEventListener('hobson:open-voice', open)
+    window.addEventListener('hobson:toggle-orb', toggle)
+    return () => window.removeEventListener('hobson:toggle-orb', toggle)
   }, [])
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading, recommended])
 
-  // Voice Mode: auto-play Hobson's latest reply, then restart listening
+  // Auto-play Hobson's latest reply (Voice Mode OR Orb Mode), then resume listening
   useEffect(() => {
-    if (!voiceMode || messages.length === 0) return
+    const active = voiceMode || orbActive
+    if (!active || messages.length === 0) return
     const last = messages[messages.length - 1]
     if (last.role !== 'assistant') return
-    // Auto-play this reply
     ;(async () => {
       try {
         const res = await fetch('/api/voice', {
@@ -263,17 +291,18 @@ function ChatPanel() {
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
         audioRef.current = audio
+        audio.onplay = () => setOrbSpeaking(true)
         audio.onended = () => {
           URL.revokeObjectURL(url)
-          // Restart listening after Hobson finishes
-          if (voiceMode && recognitionRef.current) {
+          setOrbSpeaking(false)
+          if ((voiceMode || orbActive) && recognitionRef.current) {
             try { recognitionRef.current.start(); setListening(true) } catch (e) {}
           }
         }
         await audio.play()
-      } catch (e) {}
+      } catch (e) { setOrbSpeaking(false) }
     })()
-  }, [messages, voiceMode])
+  }, [messages, voiceMode, orbActive])
 
   // Voice setup
   useEffect(() => {
@@ -293,8 +322,8 @@ function ChatPanel() {
         else interim += t
       }
       setInput((finalText || interim).trim())
-      // In voice mode, auto-send on final result
-      if (finalText && voiceMode) {
+      // Auto-send on final result in voice mode OR orb mode
+      if (finalText && (voiceMode || orbActive)) {
         const text = finalText.trim()
         if (text.length > 1) {
           setInput('')
@@ -305,7 +334,7 @@ function ChatPanel() {
     r.onend = () => setListening(false)
     r.onerror = () => setListening(false)
     recognitionRef.current = r
-  }, [voiceMode])
+  }, [voiceMode, orbActive])
 
   async function toggleMic() {
     const r = recognitionRef.current
@@ -1120,19 +1149,7 @@ function App() {
                   <div className="h-px w-12 bg-[#C9A867]" />
                   <span className="inline-flex items-center text-[#E2C285] text-[11px] uppercase tracking-[0.32em] font-medium">
                     A Hobson-Powered Concierge
-                    <span
-                      role="button"
-                      aria-label="Talk to Hobson"
-                      onClick={() => window.dispatchEvent(new Event('hobson:open-voice'))}
-                      className="orb-micro relative inline-flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
-                      style={{ marginLeft: '12px', width: '24px', height: '24px' }}
-                    >
-                      <span
-                        className="absolute inset-0 rounded-full"
-                        style={{ boxShadow: '0 0 0 1.5px #C9A867, 0 0 10px rgba(201,168,103,0.55), 0 0 18px rgba(122,184,245,0.35)' }}
-                      />
-                      <HobsonOrb size={24} state="idle" />
-                    </span>
+                    <MicroOrb size={24} />
                   </span>
                 </div>
                 <h1 className="font-serif text-5xl lg:text-6xl leading-[1.05] text-[#F5EDE0]">
