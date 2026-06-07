@@ -1114,11 +1114,26 @@ function App() {
               <img src={HERO_IMG} className="w-full h-full object-cover" alt="" />
               <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A4F]/95 via-[#264B62]/85 to-[#1B3A4F]/60" />
             </div>
-            <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-12 gap-8 items-center">
-              <div className="lg:col-span-5 text-white space-y-7 pt-4">
-                <div className="flex items-center gap-3">
+            <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-5 gap-12 items-start">
+              <div className="lg:col-span-2 text-white space-y-7 pt-4">
+                <div className="inline-flex items-center gap-3">
                   <div className="h-px w-12 bg-[#C9A867]" />
-                  <span className="text-[#E2C285] text-[11px] uppercase tracking-[0.32em] font-medium">A Hobson-Powered Concierge</span>
+                  <span className="inline-flex items-center text-[#E2C285] text-[11px] uppercase tracking-[0.32em] font-medium">
+                    A Hobson-Powered Concierge
+                    <span
+                      role="button"
+                      aria-label="Talk to Hobson"
+                      onClick={() => window.dispatchEvent(new Event('hobson:open-voice'))}
+                      className="orb-micro relative inline-flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
+                      style={{ marginLeft: '12px', width: '24px', height: '24px' }}
+                    >
+                      <span
+                        className="absolute inset-0 rounded-full"
+                        style={{ boxShadow: '0 0 0 1.5px #C9A867, 0 0 10px rgba(201,168,103,0.55), 0 0 18px rgba(122,184,245,0.35)' }}
+                      />
+                      <HobsonOrb size={24} state="idle" />
+                    </span>
+                  </span>
                 </div>
                 <h1 className="font-serif text-5xl lg:text-6xl leading-[1.05] text-[#F5EDE0]">
                   Precision in <span className="italic text-[#E2C285]">Commercial</span> Investment.
@@ -1150,16 +1165,8 @@ function App() {
                 </div>
               </div>
 
-              {/* Hobson Voice Orb — middle column, beside the chat box */}
-              <div className="lg:col-span-1 hidden lg:flex flex-col items-center justify-center">
-                <HobsonOrb
-                  size={140}
-                  state="idle"
-                  onClick={() => window.dispatchEvent(new Event('hobson:open-voice'))}
-                  label="Tap to talk"
-                />
-              </div>
-              <div className="lg:col-span-6">
+              {/* Hobson Voice Orb is now inline next to "A HOBSON-POWERED CONCIERGE" */}
+              <div className="lg:col-span-3">
                 <ChatPanel />
               </div>
             </div>
