@@ -269,6 +269,16 @@ function ChatPanel() {
     return () => window.removeEventListener('hobson:toggle-orb', toggle)
   }, [])
 
+  // External Search bar → submit query as a Hobson chat message
+  useEffect(() => {
+    const onSearch = (e) => {
+      const q = (e?.detail || '').toString().trim()
+      if (q) send(q)
+    }
+    window.addEventListener('hobson:search', onSearch)
+    return () => window.removeEventListener('hobson:search', onSearch)
+  }, [])
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading, recommended])
@@ -1157,33 +1167,40 @@ function App() {
                   <br />
                   Elegance in <span className="italic text-[#E2C285]">Luxury</span> Living.
                 </h1>
-                <p className="text-[#F5EDE0]/80 text-lg leading-relaxed font-light max-w-lg">
-                  <span className="text-[#E2C285] font-medium">Hobson</span> is your always-on AI concierge — qualifying leads, learning their tastes, and curating properties autonomously. Two brands. One impeccable agent. You step in only to close.
+                <p className="text-[#F5EDE0]/85 text-lg leading-relaxed font-light max-w-lg">
+                  Type what you're looking for, speak it aloud, or chat with <span className="text-[#E2C285] font-medium">Hobson</span>. He remembers your taste and curates listings just for you.
                 </p>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">Bespoke Concierge AI</Badge>
-                  <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">Memory &amp; preference learning</Badge>
-                  <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">Voice enabled</Badge>
-                  <Badge variant="outline" className="text-[#F5EDE0]/85 border-[#C9A867]/40 bg-white/5 font-normal">IDX/MLS ready</Badge>
-                </div>
-                <div className="grid grid-cols-3 gap-6 pt-6 border-t border-[#C9A867]/25">
-                  <div>
-                    <div className="text-3xl font-serif text-[#E2C285]">24/7</div>
-                    <div className="text-[10px] text-[#F5EDE0]/60 uppercase tracking-[0.2em] mt-1">Lead capture</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-serif text-[#E2C285]">Total</div>
-                    <div className="text-[10px] text-[#F5EDE0]/60 uppercase tracking-[0.2em] mt-1">Memory per lead</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-serif text-[#E2C285]">Auto</div>
-                    <div className="text-[10px] text-[#F5EDE0]/60 uppercase tracking-[0.2em] mt-1">Lead scoring</div>
-                  </div>
-                </div>
               </div>
 
               {/* Hobson Voice Orb is now inline next to "A HOBSON-POWERED CONCIERGE" */}
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-3 space-y-4">
+                {/* Quick Search Bar */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const q = e.currentTarget.q.value.trim()
+                    if (!q) return
+                    window.dispatchEvent(new CustomEvent('hobson:search', { detail: q }))
+                    e.currentTarget.q.value = ''
+                  }}
+                  className="relative group"
+                >
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="h-4 w-4 text-[#C9A867]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                  </div>
+                  <input
+                    name="q"
+                    type="text"
+                    placeholder='Try "Boca Raton, 5bd / 4ba, $500–600K"  —  or just chat with Hobson below'
+                    className="w-full h-12 pl-11 pr-28 rounded-md bg-white/95 backdrop-blur border border-[#C9A867]/40 text-[#1B3A4F] placeholder-[#1B3A4F]/45 focus:outline-none focus:ring-2 focus:ring-[#C9A867] focus:border-[#C9A867] text-sm font-light shadow-lg"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute inset-y-1.5 right-1.5 px-4 rounded-sm bg-[#1B3A4F] hover:bg-[#264B62] text-[#E2C285] text-xs uppercase tracking-[0.18em] font-medium transition"
+                  >
+                    Search
+                  </button>
+                </form>
                 <ChatPanel />
               </div>
             </div>
