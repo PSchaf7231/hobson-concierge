@@ -227,6 +227,8 @@ function ChatPanel() {
   const audioRef = useRef(null)
   const recognitionRef = useRef(null)
   const scrollRef = useRef(null)
+  const lastPlayedRef = useRef(null)      // guards against double-playing the same reply
+  const sendingRef = useRef(false)        // guards against double-send from multiple recognition finals
 
   // Broadcast orb state to MicroOrb (idle | listening | thinking | speaking)
   useEffect(() => {
@@ -296,9 +298,15 @@ function ChatPanel() {
     if (!active || messages.length === 0) return
     const last = messages[messages.length - 1]
     if (last.role !== 'assistant') return
+
+    // 🛡️ Guard: don't replay the same message (handles StrictMode double-render + state churn)
+    const fingerprint = messages.length + ':' + (last.content || '').slice(0, 60)
+    if (lastPlayedRef.current === fingerprint) return
+    lastPlayedRef.current = fingerprint
+
     ;(async () => {
       try {
-        // 🔇 MUTE THE MIC before Hobson speaks (prevents reverb/feedback loop)
+        // 🔇 Cut the mic — Hobson is about to speak
         try { recognitionRef.current?.stop() } catch (e) {}
         setListening(false)
 
@@ -316,7 +324,7 @@ function ChatPanel() {
         audio.onended = () => {
           URL.revokeObjectURL(url)
           setOrbSpeaking(false)
-          // 🛡️ Wait 700ms after Hobson finishes — lets speaker tail + room echo die out before mic opens
+          // 700ms tail — let speaker echo die before mic reopens
           setTimeout(() => {
             if ((voiceMode || orbActive) && recognitionRef.current) {
               try { recognitionRef.current.start(); setListening(true) } catch (e) {}
@@ -327,6 +335,53 @@ function ChatPanel() {
       } catch (e) { setOrbSpeaking(false) }
     })()
   }, [messages, voiceMode, orbActive])
+
+  // 🎙️ BARGE-IN: when user starts speaking while Hobson is talking → cut him off instantly
+  useEffect(() => {
+    if (!orbActive || typeof window === 'undefined') return
+    let stream, audioCtx, analyser, raf, alive = true
+
+    ;(async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+        const src = audioCtx.createMediaStreamSource(stream)
+        analyser = audioCtx.createAnalyser()
+        analyser.fftSize = 512
+        src.connect(analyser)
+        const data = new Uint8Array(analyser.frequencyBinCount)
+        const VOL_THRESHOLD = 28  // ambient noise floor; voice spikes above this
+
+        const tick = () => {
+          if (!alive) return
+          analyser.getByteFrequencyData(data)
+          let sum = 0
+          for (let i = 0; i < data.length; i++) sum += data[i]
+          const avg = sum / data.length
+          // If Hobson is speaking AND user voice detected → BARGE IN
+          if (audioRef.current && !audioRef.current.paused && avg > VOL_THRESHOLD) {
+            try { audioRef.current.pause() } catch (e) {}
+            setOrbSpeaking(false)
+            // Mic likely still off — restart it so we capture what they're saying
+            setTimeout(() => {
+              if (recognitionRef.current) {
+                try { recognitionRef.current.start(); setListening(true) } catch (e) {}
+              }
+            }, 100)
+          }
+          raf = requestAnimationFrame(tick)
+        }
+        tick()
+      } catch (e) { /* mic permission denied or not available */ }
+    })()
+
+    return () => {
+      alive = false
+      if (raf) cancelAnimationFrame(raf)
+      if (stream) stream.getTracks().forEach(t => t.stop())
+      if (audioCtx) audioCtx.close().catch(() => {})
+    }
+  }, [orbActive])
 
   // Voice setup
   useEffect(() => {
@@ -346,12 +401,13 @@ function ChatPanel() {
         else interim += t
       }
       setInput((finalText || interim).trim())
-      // Auto-send on final result in voice mode OR orb mode
+      // Auto-send on final result in voice mode OR orb mode (guard against double-fire)
       if (finalText && (voiceMode || orbActive)) {
         const text = finalText.trim()
-        if (text.length > 1) {
+        if (text.length > 1 && !sendingRef.current) {
+          sendingRef.current = true
           setInput('')
-          send(text)
+          send(text).finally(() => { sendingRef.current = false })
         }
       }
     }
