@@ -298,6 +298,10 @@ function ChatPanel() {
     if (last.role !== 'assistant') return
     ;(async () => {
       try {
+        // 🔇 MUTE THE MIC before Hobson speaks (prevents reverb/feedback loop)
+        try { recognitionRef.current?.stop() } catch (e) {}
+        setListening(false)
+
         const res = await fetch('/api/voice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -312,9 +316,12 @@ function ChatPanel() {
         audio.onended = () => {
           URL.revokeObjectURL(url)
           setOrbSpeaking(false)
-          if ((voiceMode || orbActive) && recognitionRef.current) {
-            try { recognitionRef.current.start(); setListening(true) } catch (e) {}
-          }
+          // 🛡️ Wait 700ms after Hobson finishes — lets speaker tail + room echo die out before mic opens
+          setTimeout(() => {
+            if ((voiceMode || orbActive) && recognitionRef.current) {
+              try { recognitionRef.current.start(); setListening(true) } catch (e) {}
+            }
+          }, 700)
         }
         await audio.play()
       } catch (e) { setOrbSpeaking(false) }
