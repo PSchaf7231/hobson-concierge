@@ -546,19 +546,6 @@ function ChatPanel() {
           </div>
         )}
 
-        {loading && (
-          <div className="flex gap-2">
-            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#C9A867] to-[#E2C285] text-[#1B3A4F] flex items-center justify-center text-xs font-bold flex-shrink-0">H</div>
-            <div className="bg-white border border-[#C8CCD1]/40 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm">
-              <span className="inline-flex gap-1">
-                <span className="h-2 w-2 rounded-full bg-[#C9A867] animate-bounce" />
-                <span className="h-2 w-2 rounded-full bg-[#C9A867] animate-bounce" style={{ animationDelay: '120ms' }} />
-                <span className="h-2 w-2 rounded-full bg-[#C9A867] animate-bounce" style={{ animationDelay: '240ms' }} />
-              </span>
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* Input */}
