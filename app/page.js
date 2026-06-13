@@ -461,7 +461,7 @@ function ChatPanel() {
 
   const greeting = persona === 'residential'
     ? "Welcome to The Anasa Collection. I am Hobson. Whom do I have the pleasure of assisting today? And tell me, what does the right home feel like?"
-    : "Next Endeavor CRE. Hobson at your service. Whom shall I have the honor of representing today? A few particulars on the mandate, and I'll have something worth your time."
+    : "Welcome to Next Endeavor CRE. I am Hobson. Whom do I have the honor of representing today? Tell me about the mandate — and I'll connect you with Paul personally."
 
   async function send(text) {
     const msg = (text ?? input).trim()
@@ -1274,6 +1274,13 @@ function App() {
                   <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Tracks cap rate, NOI, square footage, zoning</li>
                   <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Connects you directly to Paul</li>
                 </ul>
+                <a
+                  href="tel:+15612557285"
+                  className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-[#1B3A4F] hover:bg-[#264B62] text-[#E2C285] text-sm font-medium tracking-wide transition shadow-md"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg>
+                  Call Paul directly: 561-255-7285
+                </a>
               </Card>
             </div>
           </section>

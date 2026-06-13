@@ -626,7 +626,10 @@ async function handleRoute(request, { params }) {
       session.lead = mergeObj(session.lead, parsed.lead)
       session.preferences = mergeObj(session.preferences, parsed.preferences)
       const validIds = new Set(propsCatalog.map(p => p.id))
-      const recIds = (parsed.recommended_ids || []).filter(id => validIds.has(id))
+      // 🛡️ Commercial side NEVER shows listings — strip any property recs regardless of what the LLM returned
+      const recIds = session.persona === 'commercial'
+        ? []
+        : (parsed.recommended_ids || []).filter(id => validIds.has(id))
       session.recommended_ids = recIds
       session.stage = parsed.stage || session.stage
       if (typeof parsed.lead_score === 'number') session.lead_score = Math.max(0, Math.min(100, Math.round(parsed.lead_score)))
