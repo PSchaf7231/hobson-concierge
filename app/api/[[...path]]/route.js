@@ -256,9 +256,9 @@ Merge new info with KNOWN values — preserve previously captured fields if user
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: fast ? 'claude-3-5-haiku-20241022' : 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-20250514',
       messages: apiMessages,
-      max_tokens: fast ? 800 : 1400,
+      max_tokens: fast ? 600 : 1400,
       temperature: 0.6
     })
   })
