@@ -474,7 +474,7 @@ function ChatPanel() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, message: msg, persona })
+        body: JSON.stringify({ sessionId, message: msg, persona, fast: voiceMode || orbActive })
       })
       const data = await res.json()
       if (data.sessionId && !sessionId) {

@@ -212,7 +212,7 @@ Tier mapping: <=30 cold, 31-65 warm, >=66 hot.
 Be honest. A lead who has only said "hi" is COLD. A lead who has shared budget+location+contact+timeline is HOT.`
 
 // ============= LLM CALL =============
-async function callAtlas({ persona, messages, propertiesCatalog, knownPreferences, knownLead }) {
+async function callAtlas({ persona, messages, propertiesCatalog, knownPreferences, knownLead, fast = false }) {
   const personaCfg = PERSONAS[persona] || PERSONAS.residential
   const catalogSummary = propertiesCatalog.map(p => {
     const base = `[${p.id}] ${p.title} — ${p.city}, ${p.state} — $${p.price.toLocaleString()} — ${p.type}/${p.subtype} — ${p.sqft} sqft${p.beds ? ` — ${p.beds}bd/${p.baths}ba` : ''} — amenities: ${(p.amenities||[]).join(', ')}${p.capRate ? ` — cap ${p.capRate}%` : ''}`
@@ -256,9 +256,9 @@ Merge new info with KNOWN values — preserve previously captured fields if user
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: fast ? 'claude-3-5-haiku-20241022' : 'claude-sonnet-4-20250514',
       messages: apiMessages,
-      max_tokens: 1400,
+      max_tokens: fast ? 800 : 1400,
       temperature: 0.6
     })
   })
@@ -542,7 +542,7 @@ async function handleRoute(request, { params }) {
     // ---------- CHAT ----------
     if (route === '/chat' && method === 'POST') {
       const body = await request.json()
-      const { sessionId: incomingId, message, persona = 'residential' } = body
+      const { sessionId: incomingId, message, persona = 'residential', fast = false } = body
       if (!message || typeof message !== 'string') {
         return handleCORS(NextResponse.json({ error: 'message required' }, { status: 400 }))
       }
@@ -581,7 +581,8 @@ async function handleRoute(request, { params }) {
           messages: recent,
           propertiesCatalog: propsCatalog,
           knownPreferences: session.preferences,
-          knownLead: session.lead
+          knownLead: session.lead,
+          fast
         })
       } catch (e) {
         console.error('Atlas error:', e)
