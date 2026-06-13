@@ -460,7 +460,7 @@ function ChatPanel() {
   }
 
   const greeting = persona === 'residential'
-    ? "Welcome to The Anasa Collection. I am Hobson. Whom may I have the pleasure of assisting today? And tell me, sir — what does the right home feel like?"
+    ? "Welcome to The Anasa Collection. I am Hobson. Whom do I have the pleasure of assisting today? And tell me, what does the right home feel like?"
     : "Next Endeavor CRE. Hobson at your service. Whom shall I have the honor of representing today? A few particulars on the mandate, and I'll have something worth your time."
 
   async function send(text) {
@@ -1220,16 +1220,16 @@ function App() {
                   </span>
                 </div>
                 <h1 className="font-serif text-5xl lg:text-6xl leading-[1.05] text-[#F5EDE0]">
-                  Precision in <span className="italic text-[#E2C285]">Commercial</span> Investment.
+                  Smart <span className="italic text-[#E2C285]">Commercial</span> Investments.
                   <br />
-                  Elegance in <span className="italic text-[#E2C285]">Luxury</span> Living.
+                  <span className="italic text-[#E2C285]">Luxury</span> Homes Done Right.
                 </h1>
               </div>
 
               {/* Hobson Voice Orb is now inline next to "A HOBSON-POWERED CONCIERGE" */}
               <div className="lg:col-span-3 space-y-2">
                 <p className="text-[#F5EDE0]/85 text-[13px] font-light leading-snug pl-1">
-                  Type what you're looking for, speak it aloud, or chat with <span className="text-[#E2C285] font-medium">Hobson</span>. He remembers your taste and curates listings just for you.
+                  Type what you're looking for, say it out loud, or just talk to <span className="text-[#E2C285] font-medium">Hobson</span>. He remembers what matters to you and finds listings that fit.
                 </p>
                 <HeroSearch />
                 <ChatPanel />
@@ -1255,11 +1255,11 @@ function App() {
                   <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Residential Luxury</Badge>
                 </div>
                 <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">The Anasa Collection</h3>
-                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Hobson speaks the language of lifestyle. Refined, observant, attuned to the way you want to live — schools, views, privacy, prestige. Curates trophy listings that fit.</p>
+                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Hobson speaks the language of lifestyle. He pays attention to how you actually want to live: schools, views, privacy, the feel of a place. Then he finds the homes that fit.</p>
                 <ul className="text-sm mt-4 space-y-1.5 text-[#1B3A4F]/80">
-                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Captures buyer aspirations &amp; lifestyle</li>
-                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Tracks budget, beds/baths, amenities</li>
-                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Curates evocative property shortlists</li>
+                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Listens for what you really want</li>
+                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Tracks budget, beds, baths, and must-haves</li>
+                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Pulls a short list of homes worth your time</li>
                 </ul>
               </Card>
               <Card className="p-6 border-[#C9A867]/40 bg-gradient-to-br from-white via-white to-[#1B3A4F]/5 hover:border-[#C9A867] transition-all hover:shadow-xl">
@@ -1268,11 +1268,11 @@ function App() {
                   <Badge className="bg-[#1B3A4F] text-[#E2C285] hover:bg-[#1B3A4F] border-0">Commercial Real Estate</Badge>
                 </div>
                 <h3 className="text-2xl font-serif text-[#1B3A4F] mt-2">Next Endeavor CRE</h3>
-                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">Hobson pivots to analyst mode. Sharp, financial, deal-focused. Qualifies the principal, deal size, and target cap rate — surfaces investment-grade assets.</p>
+                <p className="text-sm text-[#1B3A4F]/70 mt-2 leading-relaxed">On the commercial side, Hobson gets down to business. He learns who you are, the size of deal you're after, and the returns you need, then connects you straight to Paul.</p>
                 <ul className="text-sm mt-4 space-y-1.5 text-[#1B3A4F]/80">
-                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Captures mandate &amp; firm details</li>
-                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Tracks cap rate, NOI, sq ft, zoning</li>
-                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Surfaces MOBs, ASCs, Class A office</li>
+                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Learns your criteria and firm details</li>
+                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Tracks cap rate, NOI, square footage, zoning</li>
+                  <li className="flex gap-2"><span className="text-[#C9A867]">◆</span>Connects you directly to Paul</li>
                 </ul>
               </Card>
             </div>
@@ -1312,7 +1312,7 @@ function App() {
             <span className="opacity-40 font-serif italic">×</span>
             <img src={LOGOS.commercial} alt="" className="h-14 w-14 object-contain" />
           </div>
-          <div className="opacity-60">Powered by Hobson AI · Bespoke Real Estate Advisory</div>
+          <div className="opacity-60">Powered by Hobson · Real Estate, Handled</div>
         </div>
       </footer>
     </div>
