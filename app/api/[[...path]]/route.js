@@ -284,7 +284,7 @@ Merge new info with KNOWN values — preserve previously captured fields if user
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-6',
       messages: apiMessages,
       max_tokens: fast ? 600 : 1400,
       temperature: 0.6
