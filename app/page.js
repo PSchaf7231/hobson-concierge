@@ -412,9 +412,34 @@ function ChatPanel() {
       }
     }
     r.onend = () => setListening(false)
-    r.onerror = () => setListening(false)
+    r.onerror = (e) => {
+      setListening(false)
+      // 🛡️ On audio errors (mic change, device disconnect, permission glitch),
+      // null the ref so the next start() forces a fresh recognition instance
+      if (e?.error === 'audio-capture' || e?.error === 'not-allowed' || e?.error === 'aborted') {
+        recognitionRef.current = null
+      }
+    }
     recognitionRef.current = r
   }, [voiceMode, orbActive])
+
+  // 🔄 Auto-reinit when user changes their mic / audio devices mid-session
+  useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.mediaDevices) return
+    const onDeviceChange = () => {
+      try { recognitionRef.current?.abort() } catch (e) {}
+      recognitionRef.current = null
+      setListening(false)
+      // The voice-setup useEffect will re-create the recognition object on next render
+      // Trigger re-render by toggling orbActive briefly if it's active
+      if (orbActive) {
+        setOrbActive(false)
+        setTimeout(() => setOrbActive(true), 200)
+      }
+    }
+    navigator.mediaDevices.addEventListener('devicechange', onDeviceChange)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange)
+  }, [orbActive])
 
   async function toggleMic() {
     const r = recognitionRef.current
