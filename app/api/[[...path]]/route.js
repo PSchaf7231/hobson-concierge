@@ -74,6 +74,36 @@ async function ensureSeed(db) {
       { upsert: true }
     )
   }
+  // Seed broker + integrations config if missing
+  const settings = await db.collection('settings').findOne({ id: 'global' })
+  if (!settings?.broker?.name) {
+    await db.collection('settings').updateOne(
+      { id: 'global' },
+      { $set: {
+        broker: {
+          name: 'Paul',
+          fullName: 'Paul Schafranick',
+          phone: '561-255-7285',
+          phoneTel: '+15612557285',
+          email: 'exppbc@gmail.com',
+          firm: 'The Anasa Collection / Next Endeavor CRE',
+          title: 'Principal Broker',
+          agentId: '2082417'
+        },
+        boldtrail: {
+          enabled: true,
+          apiUrl: 'https://api.kvcore.com/v2/public/contact',
+          agentId: '2082417',
+          autoPushHot: true,
+          autoPushWarm: true,
+          connectedAt: new Date().toISOString(),
+          pushCount: 0,
+          lastStatus: 'ready'
+        }
+      }},
+      { upsert: true }
+    )
+  }
 }
 
 // City-level geocode lookup (lat, lng) — used to plot test properties on the map
