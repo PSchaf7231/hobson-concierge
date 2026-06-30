@@ -336,52 +336,51 @@ function mergeObj(prev, next) {
 async function pushLeadToBoldTrail(session, cfg) {
   const lead = session.lead || {}
   const prefs = session.preferences || {}
-  const name = (lead.name || '').trim().split(/\s+/)
-  const firstName = name[0] || 'Atlas'
-  const lastName = name.slice(1).join(' ') || 'Lead'
+  const fullName = (lead.name || `Hobson Lead ${(session.id || '').slice(0,6)}`).trim()
   const transcript = (session.messages || []).slice(-20).map(m =>
-    `[${m.role === 'user' ? 'Lead' : 'Atlas'}]: ${m.content}`
+    `[${m.role === 'user' ? 'Lead' : 'Hobson'}]: ${m.content}`
   ).join('\n\n')
   const prefsSummary = Object.entries(prefs).filter(([_,v]) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0))
     .map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
 
+  // Priority tagging per spec:
+  // - HOT-PRIORITY for any commercial OR residential score >= 66
+  // - WARM for 33-65, TIRE-KICKER for <33
+  const tier = session.lead_tier || 'cold'
+  const score = session.lead_score || 0
+  const isPriority = session.persona === 'commercial' || tier === 'hot' || score >= 66
+  const priorityTag = isPriority ? 'HOT-PRIORITY' : (tier === 'warm' || score >= 33 ? 'WARM' : 'TIRE-KICKER')
+
   const payload = {
-    firstName,
-    lastName,
+    name: fullName,
     email: lead.email || null,
     phone: lead.phone || null,
-    company: lead.company || null,
-    source: 'Atlas AI Concierge',
+    source: 'Hobson AI Concierge',
     tags: [
-      'atlas',
-      session.persona === 'residential' ? 'anasa-collection' : 'next-endeavor-cre',
-      `tier-${session.lead_tier || 'cold'}`,
-      `stage-${session.stage || 'discovery'}`
+      priorityTag,
+      session.persona === 'residential' ? 'Anasa-Collection' : 'Next-Endeavor-CRE',
+      `Stage-${session.stage || 'discovery'}`,
+      `Score-${score}`
     ],
-    notes: `ATLAS LEAD — Score ${session.lead_score || 0}/100 (${(session.lead_tier||'cold').toUpperCase()})\n\nPREFERENCES:\n${prefsSummary}\n\nCONVERSATION:\n${transcript}`,
-    customFields: {
-      atlas_session_id: session.id,
-      atlas_lead_score: session.lead_score,
-      atlas_lead_tier: session.lead_tier,
-      atlas_brand: session.persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE',
-      atlas_stage: session.stage,
-      ...prefs
-    }
+    deal_type: session.persona === 'commercial' ? 'commercial' : 'buyer',
+    note: `HOBSON AI LEAD — Score ${score}/100 (${priorityTag})\nBrand: ${session.persona === 'residential' ? 'The Anasa Collection' : 'Next Endeavor CRE'}\n\nPREFERENCES:\n${prefsSummary || '(none captured)'}\n\nCONVERSATION:\n${transcript}`
   }
 
-  const url = `${cfg.baseUrl.replace(/\/$/,'')}/leads`
+  const url = cfg.apiUrl || cfg.baseUrl || process.env.BOLDTRAIL_API_URL || 'https://api.kvcore.com/v2/public/contact'
+  const token = cfg.token || cfg.apiKey || process.env.BOLDTRAIL_TOKEN
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${cfg.apiKey}`,
-        'Content-Type': 'application/json',
-        ...(cfg.accountId ? { 'X-Account-Id': cfg.accountId } : {})
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     })
     const text = await res.text()
-    return { ok: res.ok, status: res.status, response: text.slice(0, 600), endpoint: url }
+    let parsed = null
+    try { parsed = JSON.parse(text) } catch (_) {}
+    return { ok: res.ok, status: res.status, contactId: parsed?.id, response: text.slice(0, 400), endpoint: url, priorityTag }
   } catch (e) {
     return { ok: false, error: e.message, endpoint: url }
   }
@@ -657,19 +656,30 @@ async function handleRoute(request, { params }) {
       // Auto-push to Bold Trail if newly HOT (and configured)
       try {
         const settings = await db.collection('settings').findOne({ id: 'global' })
-        const btCfg = settings?.boldtrail
-        const shouldPush = btCfg?.enabled && btCfg?.apiKey && (
-          (btCfg.autoPushHot && session.lead_tier === 'hot') ||
-          (btCfg.autoPushWarm && session.lead_tier === 'warm')
+        const btCfg = settings?.boldtrail || {}
+        const envEnabled = !!process.env.BOLDTRAIL_TOKEN
+        const isEnabled = btCfg.enabled || envEnabled
+        const hasToken = btCfg.apiKey || btCfg.token || process.env.BOLDTRAIL_TOKEN
+        // Auto-push when: hot OR warm (always — gives full lead pipeline visibility)
+        const shouldPush = isEnabled && hasToken && (
+          session.lead_tier === 'hot' || session.lead_tier === 'warm' ||
+          (session.lead?.email && session.lead?.phone)  // also push fully-qualified leads
         )
         const alreadyPushed = session.boldtrailPushedAt
-        if (shouldPush && !alreadyPushed && session.lead?.email) {
+        if (shouldPush && !alreadyPushed && (session.lead?.email || session.lead?.phone)) {
           const result = await pushLeadToBoldTrail(session, btCfg)
           await db.collection('sessions').updateOne({ id: sessionId }, { $set: {
             boldtrailPushedAt: new Date().toISOString(),
-            boldtrailStatus: result.ok ? 'pushed' : 'failed'
+            boldtrailStatus: result.ok ? 'pushed' : 'failed',
+            boldtrailContactId: result.contactId || null,
+            boldtrailPriorityTag: result.priorityTag || null
           }})
-          await db.collection('settings').updateOne({ id: 'global' }, { $inc: { 'boldtrail.pushCount': 1 }, $set: { 'boldtrail.lastPush': new Date().toISOString() } })
+          await db.collection('settings').updateOne(
+            { id: 'global' },
+            { $inc: { 'boldtrail.pushCount': 1 }, $set: { 'boldtrail.lastPush': new Date().toISOString(), 'boldtrail.lastStatus': result.ok ? 'success' : 'failed' } },
+            { upsert: true }
+          )
+          console.log(`[BoldTrail] Pushed lead → contactId=${result.contactId} tag=${result.priorityTag} status=${result.status}`)
         }
       } catch (pushErr) {
         console.error('BoldTrail auto-push failed:', pushErr.message)
