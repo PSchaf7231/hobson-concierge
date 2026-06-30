@@ -350,7 +350,9 @@ function ChatPanel() {
         analyser.fftSize = 512
         src.connect(analyser)
         const data = new Uint8Array(analyser.frequencyBinCount)
-        const VOL_THRESHOLD = 28  // ambient noise floor; voice spikes above this
+        const VOL_THRESHOLD = 65  // raised from 28 — Hobson's own audio leaking through speakers was triggering false barge-ins
+        const SUSTAIN_FRAMES = 12 // require ~200ms of sustained voice (at 60fps) before cutting Hobson off
+        let aboveCount = 0
 
         const tick = () => {
           if (!alive) return
@@ -358,16 +360,21 @@ function ChatPanel() {
           let sum = 0
           for (let i = 0; i < data.length; i++) sum += data[i]
           const avg = sum / data.length
-          // If Hobson is speaking AND user voice detected → BARGE IN
+          // Only count as voice if Hobson is speaking AND volume sustained above threshold
           if (audioRef.current && !audioRef.current.paused && avg > VOL_THRESHOLD) {
-            try { audioRef.current.pause() } catch (e) {}
-            setOrbSpeaking(false)
-            // Mic likely still off — restart it so we capture what they're saying
-            setTimeout(() => {
-              if (recognitionRef.current) {
-                try { recognitionRef.current.start(); setListening(true) } catch (e) {}
-              }
-            }, 100)
+            aboveCount++
+            if (aboveCount >= SUSTAIN_FRAMES) {
+              try { audioRef.current.pause() } catch (e) {}
+              setOrbSpeaking(false)
+              setTimeout(() => {
+                if (recognitionRef.current) {
+                  try { recognitionRef.current.start(); setListening(true) } catch (e) {}
+                }
+              }, 100)
+              aboveCount = 0
+            }
+          } else {
+            aboveCount = Math.max(0, aboveCount - 1)
           }
           raf = requestAnimationFrame(tick)
         }
