@@ -424,21 +424,36 @@ function ChatPanel() {
   }, [voiceMode, orbActive])
 
   // 🔄 Auto-reinit when user changes their mic / audio devices mid-session
+  // (debounced — Chrome fires spurious devicechange events when the mic first activates)
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.mediaDevices) return
+    let settleTimer = null
+    let lastChangeAt = 0
     const onDeviceChange = () => {
-      try { recognitionRef.current?.abort() } catch (e) {}
-      recognitionRef.current = null
-      setListening(false)
-      // The voice-setup useEffect will re-create the recognition object on next render
-      // Trigger re-render by toggling orbActive briefly if it's active
-      if (orbActive) {
-        setOrbActive(false)
-        setTimeout(() => setOrbActive(true), 200)
-      }
+      const now = Date.now()
+      // Ignore events in the first 3 seconds (Chrome fires one when mic first opens)
+      if (now - lastChangeAt < 3000) return
+      // Also ignore if recognition just started (within last 3s)
+      if (!recognitionRef.current) return
+      lastChangeAt = now
+      clearTimeout(settleTimer)
+      settleTimer = setTimeout(() => {
+        try { recognitionRef.current?.abort() } catch (e) {}
+        recognitionRef.current = null
+        setListening(false)
+        if (orbActive) {
+          setOrbActive(false)
+          setTimeout(() => setOrbActive(true), 300)
+        }
+      }, 500)
     }
+    // Set the initial timestamp so first 3s are ignored
+    lastChangeAt = Date.now()
     navigator.mediaDevices.addEventListener('devicechange', onDeviceChange)
-    return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange)
+    return () => {
+      clearTimeout(settleTimer)
+      navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange)
+    }
   }, [orbActive])
 
   async function toggleMic() {
