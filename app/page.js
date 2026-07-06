@@ -1186,6 +1186,12 @@ function App() {
               <img src={LOGOS.residential} alt="The Anasa Collection" className="h-11 w-16 object-contain" />
               <span className="text-sm text-[#E2C285]/40 font-serif italic">×</span>
               <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-11 w-11 object-contain" />
+              <div className="ml-4 h-11 flex items-center px-4 rounded border border-[#C9A867]/40 bg-gradient-to-b from-[#0F2533] to-[#1B3A4F]">
+                <div className="flex flex-col leading-none">
+                  <span className="font-serif italic text-[#E2C285] text-lg tracking-wide">VantaSure</span>
+                  <span className="text-[9px] uppercase tracking-[0.28em] text-[#C9A867]/80 mt-0.5">Realty</span>
+                </div>
+              </div>
             </div>
           </div>
           <Tabs value={tab} onValueChange={setTab}>
