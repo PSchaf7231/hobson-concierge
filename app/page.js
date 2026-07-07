@@ -1175,6 +1175,13 @@ function MapView() {
 
 function App() {
   const [tab, setTab] = useState('concierge')
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      setIsAdmin(params.get('admin') === '1')
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#F5EDE0] font-sans">
@@ -1198,8 +1205,8 @@ function App() {
             <TabsList className="bg-white/10 border border-[#C9A867]/20">
               <TabsTrigger value="concierge" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Sparkles className="h-3.5 w-3.5 mr-1.5" />Concierge</TabsTrigger>
               <TabsTrigger value="map" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><MapIcon className="h-3.5 w-3.5 mr-1.5" />Map</TabsTrigger>
-              <TabsTrigger value="admin" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Settings className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
-              <TabsTrigger value="integrations" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Building2 className="h-3.5 w-3.5 mr-1.5" />Integrations</TabsTrigger>
+              {isAdmin && <TabsTrigger value="admin" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Settings className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>}
+              {isAdmin && <TabsTrigger value="integrations" className="data-[state=active]:bg-[#C9A867] data-[state=active]:text-[#1B3A4F]"><Building2 className="h-3.5 w-3.5 mr-1.5" />Integrations</TabsTrigger>}
             </TabsList>
           </Tabs>
         </div>
@@ -1227,6 +1234,27 @@ function App() {
                   <br />
                   <span className="italic text-[#E2C285]">Luxury</span> Homes Done Right.
                 </h1>
+
+                {/* Hobson Avatar + Desk — HeyGen video slot */}
+                <div className="mt-6 relative rounded-lg overflow-hidden border border-[#C9A867]/20 bg-gradient-to-b from-[#0B1526] to-[#0f1e35] aspect-[16/9] shadow-2xl">
+                  {/* Fallback background — luxurious desk vibe with gold tinting */}
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(201,162,39,0.15),transparent_70%)]" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {/* When you drop the HeyGen video URL, replace this block with:
+                        <video autoPlay loop muted playsInline className="w-full h-full object-cover">
+                          <source src="/hobson-avatar.mp4" type="video/mp4" />
+                        </video>
+                    */}
+                    <div className="text-center">
+                      <div className="inline-flex h-24 w-24 rounded-full bg-[#C9A867]/10 border border-[#C9A867]/30 items-center justify-center mb-3">
+                        <MicroOrb size={56} />
+                      </div>
+                      <div className="text-[10px] uppercase tracking-[0.3em] text-[#C9A867]/70 font-medium">Hobson · Awaiting</div>
+                    </div>
+                  </div>
+                  {/* Bottom "desk" strip */}
+                  <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-[#C9A867]/40 to-transparent" />
+                </div>
               </div>
 
               {/* Hobson Voice Orb is now inline next to "A HOBSON-POWERED CONCIERGE" */}

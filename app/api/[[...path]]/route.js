@@ -265,6 +265,108 @@ const SCORING_RUBRIC = `LEAD SCORING (0-100 integer):
 Tier mapping: <=30 cold, 31-65 warm, >=66 hot.
 Be honest. A lead who has only said "hi" is COLD. A lead who has shared budget+location+contact+timeline is HOT.`
 
+// ============= LIVE MLS (Spark RESO Web API v3) =============
+const SPARK_CACHE = { ts: 0, data: [] }
+const SPARK_TTL_MS = 5 * 60 * 1000 // 5 min cache
+
+async function fetchLiveMLS({ prefs = {}, limit = 40 } = {}) {
+  const base = process.env.SPARK_API_BASE || 'https://replication.sparkapi.com/Version/3/Reso/OData'
+  const token = process.env.SPARK_API_TOKEN
+  if (!token) return null
+
+  const filters = ["StandardStatus eq 'Active'"]
+  if (prefs.city) filters.push(`City eq '${String(prefs.city).replace(/'/g, "''")}'`)
+  if (prefs.budgetMin) filters.push(`ListPrice ge ${Number(prefs.budgetMin)}`)
+  if (prefs.budgetMax) filters.push(`ListPrice le ${Number(prefs.budgetMax)}`)
+  if (prefs.beds) filters.push(`BedroomsTotal ge ${Number(prefs.beds)}`)
+  if (prefs.baths) filters.push(`BathroomsTotalInteger ge ${Number(prefs.baths)}`)
+  const filter = encodeURIComponent(filters.join(' and '))
+  const select = encodeURIComponent([
+    'ListingKey','ListingId','ListPrice','StandardStatus',
+    'BedroomsTotal','BathroomsTotalInteger','LivingArea',
+    'StreetNumber','StreetName','StreetSuffix','UnitNumber','City','StateOrProvince','PostalCode',
+    'PublicRemarks','PropertyType','PropertySubType','YearBuilt','LotSizeAcres',
+    'ListAgentFirstName','ListAgentLastName','ListOfficeName','Media',
+    'Latitude','Longitude','VirtualTourURLUnbranded','PhotosCount','ModificationTimestamp'
+  ].join(','))
+  const url = `${base}/Property?$top=${limit}&$filter=${filter}&$select=${select}&$orderby=ListPrice desc`
+
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+  })
+  if (!res.ok) {
+    console.error('[SparkAPI] failed:', res.status, await res.text().catch(() => ''))
+    return null
+  }
+  const data = await res.json()
+  return (data.value || []).map(mapResoToHobson).filter(Boolean)
+}
+
+function mapResoToHobson(r) {
+  if (!r?.ListingKey) return null
+  const street = [r.StreetNumber, r.StreetName, r.StreetSuffix, r.UnitNumber ? `#${r.UnitNumber}` : null].filter(Boolean).join(' ').trim()
+  const address = [street, r.City, r.StateOrProvince, r.PostalCode].filter(Boolean).join(', ')
+  const images = Array.isArray(r.Media)
+    ? r.Media.filter(m => m?.MediaURL).slice(0, 8).map(m => m.MediaURL)
+    : []
+  const type = /commercial|office|retail|industrial|medical/i.test(`${r.PropertyType} ${r.PropertySubType}`) ? 'commercial' : 'residential'
+  return {
+    id: `mls_${r.ListingKey}`,
+    listingId: r.ListingId || r.ListingKey,
+    type,
+    title: r.PublicRemarks ? r.PublicRemarks.slice(0, 60) + (r.PublicRemarks.length > 60 ? '…' : '') : (street || 'Listing'),
+    address,
+    city: r.City || '',
+    state: r.StateOrProvince || '',
+    zip: r.PostalCode || '',
+    price: r.ListPrice || 0,
+    beds: r.BedroomsTotal || 0,
+    baths: r.BathroomsTotalInteger || 0,
+    sqft: r.LivingArea || 0,
+    yearBuilt: r.YearBuilt || null,
+    lotAcres: r.LotSizeAcres || null,
+    description: r.PublicRemarks || '',
+    images: images.length ? images : ['/placeholder-property.jpg'],
+    heroImage: images[0] || '/placeholder-property.jpg',
+    location: (r.Latitude && r.Longitude) ? { type: 'Point', coordinates: [r.Longitude, r.Latitude] } : null,
+    amenities: [],
+    virtualTour: r.VirtualTourURLUnbranded || null,
+    photosCount: r.PhotosCount || images.length,
+    agent: [r.ListAgentFirstName, r.ListAgentLastName].filter(Boolean).join(' ') || null,
+    office: r.ListOfficeName || null,
+    source: 'MLS',
+    modifiedAt: r.ModificationTimestamp || null
+  }
+}
+
+async function getLiveCatalog(db, prefs = {}) {
+  // Try Spark first, fall back to DB seed if it fails or returns nothing
+  if (process.env.SPARK_API_TOKEN) {
+    const now = Date.now()
+    const cacheKey = JSON.stringify(prefs || {})
+    if (SPARK_CACHE.key === cacheKey && (now - SPARK_CACHE.ts) < SPARK_TTL_MS && SPARK_CACHE.data.length > 0) {
+      return SPARK_CACHE.data
+    }
+    try {
+      const live = await fetchLiveMLS({ prefs, limit: 40 })
+      if (live && live.length > 0) {
+        SPARK_CACHE.ts = now
+        SPARK_CACHE.key = cacheKey
+        SPARK_CACHE.data = live
+        // Cache to DB too so property lookups by id work later
+        for (const p of live) {
+          try { await db.collection('properties').updateOne({ id: p.id }, { $set: p }, { upsert: true }) } catch (e) {}
+        }
+        return live
+      }
+    } catch (e) {
+      console.error('[SparkAPI] Fetch error:', e.message)
+    }
+  }
+  // Fallback: local seed
+  return await db.collection('properties').find({}).toArray()
+}
+
 // ============= LLM CALL =============
 async function callAtlas({ persona, messages, propertiesCatalog, knownPreferences, knownLead, knownBroker = null, fast = false }) {
   const personaCfg = PERSONAS[persona] || PERSONAS.residential
@@ -629,7 +731,7 @@ async function handleRoute(request, { params }) {
       session.messages.push({ role: 'user', content: message, ts: new Date().toISOString() })
       const recent = session.messages.slice(-30)
 
-      const propsCatalog = await db.collection('properties').find({}).toArray()
+      const propsCatalog = await getLiveCatalog(db, session.preferences || {})
       const brokerSettings = await db.collection('settings').findOne({ id: 'global' })
       const knownBroker = brokerSettings?.broker || null
 
