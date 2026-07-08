@@ -289,3 +289,30 @@ agent_communication:
         - Real-time dashboard updates (5-second polling interval working)
         
         The application is production-ready and all core features are working as designed!
+
+---
+
+## 2026-07-08 — PropertyShowcase mockup refactor (main agent)
+
+**Task**: Rebuild the right-panel property cards to match user-provided mockup `hobson-layout-preview (1).html` + `listing-cards-mockup.html`.
+
+**Files changed**:
+- `/app/components/PropertyShowcase.jsx` (full rewrite)
+- `/app/app/globals.css` (added Bodoni Moda + Cormorant Garamond fonts)
+
+**Result**:
+- ✅ "Curated Residences" header in Bodoni Moda serif with `PALM BEACH COUNTY · N RESULTS` subtitle
+- ✅ 2-column grid, 92% width, max-w-920px, mx-auto centered inside right panel
+- ✅ Cards use dark navy `#101D33` panel, gold `#C9A227` accents, 16/10 photo aspect
+- ✅ Portrait card shape (photo + price + address + specs + CTA = taller than wide)
+- ✅ Gold serif prices in Cormorant Garamond (full number, e.g. "$4,750,000")
+- ✅ Specs row (Beds / Baths / SqFt) with gold SVG icons, no clipping
+- ✅ Deal-in cascade animation preserved (700ms curve, 850ms stagger between cards)
+- ✅ Status pill top-left with backdrop-blur ("New Listing" / "Live MLS")
+- ✅ Gold hairline gradient rule between photo and body
+- ✅ "Design this home →" CTA strip at bottom (virtual staging placeholder)
+- ✅ Idle state shows crossfading luxury imagery with "Awaiting your criteria" copy
+
+**Testing**: Verified visually via screenshot_tool with query "Show me 6 bed pool homes in Boca Raton around $5M" — 3 property cards dealt in correctly with all styling matching mockup.
+
+**Note**: Spark API log shows `$select contains non-matching element: Media` — Spark falls back to local seed data. Not fixed in this pass (not user-flagged).

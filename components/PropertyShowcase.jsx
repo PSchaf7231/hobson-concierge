@@ -17,41 +17,105 @@ function money(n) {
   return `$${n}`
 }
 
+function fullMoney(n) {
+  if (!n) return '—'
+  return `$${n.toLocaleString()}`
+}
+
+function statusPill(p) {
+  if (p.source === 'MLS') return 'Live MLS'
+  if (p.status) return p.status
+  if (p.type === 'commercial') return 'Commercial'
+  return 'New Listing'
+}
+
 function PropertyCard({ p, index = 0 }) {
   return (
     <div
-      className="group relative rounded-xl overflow-hidden bg-white/95 shadow-xl border border-[#C9A867]/20 hover:border-[#C9A867]/60 hover:shadow-2xl transition-all"
+      className="card group relative rounded-[14px] overflow-hidden cursor-pointer transition-all duration-500"
       style={{
-        animation: `dealIn 700ms cubic-bezier(0.4, 0, 0.2, 1) both`,
+        background: '#101D33',
+        boxShadow: '0 18px 45px rgba(0, 0, 0, .45)',
+        animation: 'dealIn 700ms cubic-bezier(0.22, 0.9, 0.3, 1.05) both',
         animationDelay: `${index * 850}ms`
       }}
     >
-      <div className="aspect-[16/10] bg-slate-200 overflow-hidden">
+      {/* Photo — wider aspect so overall card ends up nicely portrait */}
+      <div className="relative overflow-hidden" style={{ aspectRatio: '16/10' }}>
         <img
-          src={p.heroImage || p.images?.[0]}
-          alt={p.address || 'Property'}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          src={p.heroImage || p.images?.[0] || IDLE_IMAGES[index % IDLE_IMAGES.length]}
+          alt={p.address || p.title || 'Property'}
+          className="w-full h-full object-cover transition-all duration-[3500ms] ease-out group-hover:scale-105"
+          style={{ filter: 'brightness(.92)' }}
           loading="lazy"
         />
-        {p.source === 'MLS' && (
-          <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#C9A867] text-[#0B1526] text-[9px] font-bold uppercase tracking-widest rounded">
-            LIVE MLS
-          </div>
-        )}
+        {/* Status pill top-left */}
+        <span
+          className="absolute top-3.5 left-3.5 text-[#EDF1F7] text-[10px] uppercase font-medium px-3 py-1.5 rounded-full backdrop-blur-md"
+          style={{
+            letterSpacing: '0.22em',
+            background: 'rgba(11, 21, 38, 0.72)',
+            border: '1px solid rgba(255, 255, 255, 0.12)'
+          }}
+        >
+          {statusPill(p)}
+        </span>
       </div>
-      <div className="p-3">
-        <div className="font-serif text-xl text-[#C9A867] leading-none">{money(p.price)}</div>
-        <div className="text-[11px] text-[#0B1526]/70 mt-1 truncate">{p.address || p.city || 'Address on request'}</div>
-        <div className="flex items-center gap-3 text-[11px] text-[#0B1526]/80 mt-2 pt-2 border-t border-[#C9A867]/15">
-          <span><b className="text-[#0B1526]">{p.beds || '—'}</b> bd</span>
-          <span><b className="text-[#0B1526]">{p.baths || '—'}</b> ba</span>
-          <span><b className="text-[#0B1526]">{p.sqft ? p.sqft.toLocaleString() : '—'}</b> sqft</span>
+
+      {/* Gold hairline divider */}
+      <div
+        className="h-px"
+        style={{
+          background: 'linear-gradient(90deg, transparent, rgba(201, 162, 39, .55) 18%, rgba(201, 162, 39, .55) 82%, transparent)'
+        }}
+      />
+
+      {/* Body */}
+      <div className="px-5 pt-4 pb-4">
+        <div
+          className="text-[#C9A227] leading-none"
+          style={{
+            fontFamily: '"Cormorant Garamond", "Playfair Display", Georgia, serif',
+            fontWeight: 600,
+            fontSize: '1.75rem',
+            letterSpacing: '.02em'
+          }}
+        >
+          {fullMoney(p.price)}
+        </div>
+        <div className="text-[#95A3B8] text-[0.78rem] mt-2 truncate" style={{ letterSpacing: '.03em' }}>
+          {p.address || `Address available upon request · ${p.city || 'Palm Beach County'}, ${p.state || 'FL'}`}
+        </div>
+
+        {/* Specs */}
+        <div className="flex items-center justify-between gap-2 mt-3.5 text-[0.72rem] text-[#95A3B8]" style={{ fontWeight: 400 }}>
+          <span className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
+              <path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18h18M6 10V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"/>
+            </svg>
+            <b className="text-[#EDF1F7] font-medium">{p.beds || '—'}</b>&nbsp;Beds
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
+              <path d="M4 12h16M6 12V6a2 2 0 0 1 2-2h1M4 12l1.5 6h13L20 12"/>
+            </svg>
+            <b className="text-[#EDF1F7] font-medium">{p.baths || '—'}</b>&nbsp;Baths
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
+              <rect x="4" y="4" width="16" height="16" rx="1"/>
+              <path d="M4 15h5v5"/>
+            </svg>
+            <b className="text-[#EDF1F7] font-medium">{p.sqft ? p.sqft.toLocaleString() : '—'}</b>&nbsp;SqFt
+          </span>
         </div>
       </div>
-      {/* Future: virtual staging trigger — bottom strip */}
+
+      {/* Design this home CTA — subtle bottom strip */}
       <button
         type="button"
-        className="w-full py-1.5 text-[9px] uppercase tracking-[0.2em] text-[#C9A867] bg-[#0B1526]/95 hover:bg-[#0B1526] transition font-medium"
+        className="w-full py-2 text-[10px] uppercase tracking-[0.28em] text-[#C9A227] transition-colors font-medium border-t"
+        style={{ background: 'rgba(11, 21, 38, 0.5)', borderColor: 'rgba(201, 162, 39, 0.15)' }}
         title="Virtual staging (coming soon)"
       >
         Design this home →
@@ -72,61 +136,104 @@ export default function PropertyShowcase({ properties = [] }) {
   }, [hasProps])
 
   return (
-    <div className="relative h-full min-h-[560px] rounded-lg overflow-hidden bg-gradient-to-b from-[#0B1526] to-[#0f1e35] border border-[#C9A867]/15">
+    <div
+      className="relative rounded-lg overflow-hidden border h-full min-h-[720px]"
+      style={{
+        background: 'radial-gradient(1200px 700px at 85% -10%, rgba(201, 162, 39, .07), transparent 60%), #0B1526',
+        borderColor: 'rgba(201, 162, 39, 0.15)'
+      }}
+    >
       <style jsx global>{`
         @keyframes dealIn {
-          0% { opacity: 0; transform: translateY(-30px) scale(0.95); }
-          60% { transform: translateY(4px) scale(1.01); }
+          0% { opacity: 0; transform: translateY(-34px) scale(.97); }
+          60% { opacity: 1; }
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes fadeInOut {
-          0%, 100% { opacity: 0; }
-          20%, 80% { opacity: 1; }
+        .card:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 28px 60px rgba(0, 0, 0, .6) !important;
         }
       `}</style>
 
-      {/* Header space — room for text */}
-      <div className="relative pt-6 pb-3 px-6 z-10">
-        <div className="text-[10px] uppercase tracking-[0.32em] text-[#C9A867]/70 font-medium">
-          {hasProps ? `Curated · ${properties.length} listing${properties.length === 1 ? '' : 's'}` : 'Featured Homes'}
+      {/* Header */}
+      <div className="relative z-10 pt-8 px-8 pb-4">
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h1
+              className="text-[#EDF1F7]"
+              style={{
+                fontFamily: '"Bodoni Moda", "Playfair Display", Georgia, serif',
+                fontWeight: 500,
+                fontSize: '1.55rem',
+                letterSpacing: '.04em'
+              }}
+            >
+              Curated Residences
+            </h1>
+            <div
+              className="text-[#95A3B8] mt-1.5 uppercase"
+              style={{ fontSize: '.72rem', letterSpacing: '.28em' }}
+            >
+              {hasProps
+                ? `Palm Beach County · ${properties.length} result${properties.length === 1 ? '' : 's'}`
+                : 'Awaiting Criteria'}
+            </div>
+          </div>
         </div>
-        <div className="h-px bg-gradient-to-r from-[#C9A867]/40 to-transparent mt-3" />
       </div>
 
       {/* IDLE state — crossfading luxury imagery */}
       {!hasProps && (
-        <div className="absolute inset-0 pt-16">
+        <div className="absolute inset-0 pt-24">
           {IDLE_IMAGES.map((src, i) => (
             <img
               key={src}
               src={src}
               alt=""
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ${i === imgIdx ? 'opacity-30' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ${i === imgIdx ? 'opacity-25' : 'opacity-0'}`}
             />
           ))}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0B1526] via-transparent to-[#0B1526]/80" />
-          <div className="relative h-full flex items-center justify-center text-center px-8">
+          <div className="relative h-full flex items-center justify-center text-center px-10">
             <div>
-              <div className="font-serif text-[#E2C285] text-3xl italic mb-3">Awaiting your criteria</div>
-              <div className="text-[#F5EDE0]/70 text-sm max-w-sm mx-auto leading-relaxed">
-                Tell Hobson what you're looking for.  He will present listings tailored to your taste, right here.
+              <div
+                className="text-[#E2C285] italic mb-4"
+                style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontSize: '2.25rem', fontWeight: 500 }}
+              >
+                Awaiting your criteria
+              </div>
+              <div className="text-[#F5EDE0]/70 text-sm max-w-md mx-auto leading-relaxed">
+                Tell Hobson what you're looking for. He will deal in a curated set of listings, right here, one card at a time.
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ACTIVE state — cards cascade top-to-bottom, first 4 dead-center visible, rest below with scroll pip */}
+      {/* ACTIVE state — 2-column grid, 80% width, centered, cards deal-in cascade */}
       {hasProps && (
-        <div className="relative">
-          <div className="px-5 pb-6 max-h-[600px] overflow-y-auto scroll-smooth" style={{ scrollbarWidth: 'thin' }}>
-            <div className="grid grid-cols-2 gap-4 w-full max-w-[520px] mx-auto pt-4">
-              {properties.map((p, i) => <PropertyCard key={p.id} p={p} index={i} />)}
+        <div className="relative pb-8">
+          <div
+            className="mx-auto overflow-y-auto scroll-smooth px-2"
+            style={{
+              width: '92%',
+              maxWidth: '920px',
+              maxHeight: '640px',
+              scrollbarWidth: 'thin'
+            }}
+          >
+            <div className="grid grid-cols-2 gap-6 pt-2">
+              {properties.map((p, i) => (
+                <PropertyCard key={p.id || p.listingId || i} p={p} index={i} />
+              ))}
             </div>
           </div>
           {properties.length > 4 && (
             <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none z-20">
-              <div className="px-4 py-1.5 rounded-full bg-[#0B1526]/90 border border-[#C9A867]/40 text-[10px] uppercase tracking-[0.28em] text-[#E2C285] font-medium animate-pulse shadow-lg">
+              <div
+                className="px-4 py-1.5 rounded-full bg-[#0B1526]/90 border border-[#C9A227]/40 text-[10px] uppercase text-[#E2C285] font-medium animate-pulse shadow-lg"
+                style={{ letterSpacing: '0.28em' }}
+              >
                 {properties.length - 4} more listings ↓
               </div>
             </div>
