@@ -23,7 +23,7 @@ function PropertyCard({ p, index = 0 }) {
       className="group relative rounded-xl overflow-hidden bg-white/95 shadow-xl border border-[#C9A867]/20 hover:border-[#C9A867]/60 hover:shadow-2xl transition-all"
       style={{
         animation: `dealIn 700ms cubic-bezier(0.4, 0, 0.2, 1) both`,
-        animationDelay: `${index * 300}ms`
+        animationDelay: `${index * 850}ms`
       }}
     >
       <div className="aspect-[16/10] bg-slate-200 overflow-hidden">
@@ -116,12 +116,21 @@ export default function PropertyShowcase({ properties = [] }) {
         </div>
       )}
 
-      {/* ACTIVE state — cascading 4-card grid, dead center */}
+      {/* ACTIVE state — cards cascade top-to-bottom, first 4 dead-center visible, rest below with scroll pip */}
       {hasProps && (
-        <div className="px-5 pb-6 flex items-center justify-center min-h-[calc(100%-72px)]">
-          <div className="grid grid-cols-2 gap-4 w-full max-w-[520px]">
-            {shown.map((p, i) => <PropertyCard key={p.id} p={p} index={i} />)}
+        <div className="relative">
+          <div className="px-5 pb-6 max-h-[600px] overflow-y-auto scroll-smooth" style={{ scrollbarWidth: 'thin' }}>
+            <div className="grid grid-cols-2 gap-4 w-full max-w-[520px] mx-auto pt-4">
+              {properties.map((p, i) => <PropertyCard key={p.id} p={p} index={i} />)}
+            </div>
           </div>
+          {properties.length > 4 && (
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none z-20">
+              <div className="px-4 py-1.5 rounded-full bg-[#0B1526]/90 border border-[#C9A867]/40 text-[10px] uppercase tracking-[0.28em] text-[#E2C285] font-medium animate-pulse shadow-lg">
+                {properties.length - 4} more listings ↓
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
