@@ -15,6 +15,7 @@ const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: fal
 const HobsonOrb = dynamic(() => import('@/components/HobsonOrb'), { ssr: false })
 const MicroOrb = dynamic(() => import('@/components/MicroOrb'), { ssr: false })
 const HeroSearch = dynamic(() => import('@/components/HeroSearch'), { ssr: false })
+const PropertyShowcase = dynamic(() => import('@/components/PropertyShowcase'), { ssr: false })
 
 // ============ BRAND ASSETS ============
 const LOGOS = {
@@ -480,6 +481,10 @@ function ChatPanel() {
       }
       setMessages([...newMsgs, { role: 'assistant', content: data.reply || '...' }])
       setRecommended(data.recommended || [])
+      // Broadcast to hero PropertyShowcase panel on right side
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('hobson:properties', { detail: data.recommended || [] }))
+      }
       setFavorites(data.favorites || [])
       setFavIds(new Set((data.favorites || []).map(f => f.id)))
       setLeadTier(data.lead_tier)
@@ -1176,11 +1181,16 @@ function MapView() {
 function App() {
   const [tab, setTab] = useState('concierge')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [heroShowcase, setHeroShowcase] = useState([])
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       setIsAdmin(params.get('admin') === '1')
     }
+    // Listen for property recommendations from ChatPanel
+    const onProps = (e) => setHeroShowcase(Array.isArray(e.detail) ? e.detail : [])
+    window.addEventListener('hobson:properties', onProps)
+    return () => window.removeEventListener('hobson:properties', onProps)
   }, [])
 
   return (
@@ -1258,12 +1268,17 @@ function App() {
               </div>
 
               {/* Hobson Voice Orb is now inline next to "A HOBSON-POWERED CONCIERGE" */}
-              <div className="lg:col-span-3 space-y-2">
-                <p className="text-[#F5EDE0]/85 text-[13px] font-light leading-snug pl-1">
-                  Type what you're looking for, say it out loud, or just talk to <span className="text-[#E2C285] font-medium">Hobson</span>. He remembers what matters to you and finds listings that fit.
-                </p>
-                <HeroSearch />
-                <ChatPanel />
+              <div className="lg:col-span-3 grid lg:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <p className="text-[#F5EDE0]/85 text-[13px] font-light leading-snug pl-1">
+                    Type what you're looking for, say it out loud, or just talk to <span className="text-[#E2C285] font-medium">Hobson</span>. He remembers what matters to you and finds listings that fit.
+                  </p>
+                  <HeroSearch />
+                  <ChatPanel />
+                </div>
+                <div>
+                  <PropertyShowcase properties={heroShowcase} />
+                </div>
               </div>
             </div>
           </section>
