@@ -182,6 +182,7 @@ function LeadCaptureModal({ open, onOpenChange, sessionId, onCaptured }) {
 // =====================================================================
 function InlineLeadCapture() {
   const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [busy, setBusy] = useState(false)
@@ -203,11 +204,12 @@ function InlineLeadCapture() {
     try {
       const sessionId = typeof window !== 'undefined' ? localStorage.getItem('atlas_session') : null
       if (sessionId) {
+        const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
         await fetch(`/api/sessions/${sessionId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            lead: { name: firstName.trim(), email: email.trim(), phone: phone.trim() },
+            lead: { name: fullName, email: email.trim(), phone: phone.trim() },
             savedSearch: true
           })
         })
@@ -232,6 +234,7 @@ function InlineLeadCapture() {
   return (
     <div className="flex items-center gap-1.5 flex-shrink-0">
       <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-24`} />
+      <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-24`} />
       <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-36`} />
       <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-36`} />
       <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition">
@@ -478,9 +481,9 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </h1>
       </div>
 
-      {/* Hobson avatar / HeyGen video slot — shorter, leaves room for chat */}
-      <div className="px-6 pb-2 flex-shrink-0">
-        <div className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 aspect-[16/5] shadow-xl" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
+      {/* Hobson avatar / HeyGen video slot — portrait, centered with breathing room */}
+      <div className="px-6 pb-6 flex-shrink-0 flex justify-center">
+        <div className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[55%] aspect-[4/5]" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
           <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(212,175,55,0.14), transparent 70%)' }} />
           <div className="absolute inset-0 flex items-center justify-center">
             {/* When HeyGen MP4 is provided, replace this block with:
@@ -501,18 +504,8 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </div>
       </div>
 
-      {/* Middle: chips (when empty) + messages (scrollable) */}
+      {/* Middle: messages (scrollable) — chips removed */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-3 space-y-4">
-        {messages.length === 0 && (
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map(s => (
-              <button key={s} onClick={() => send(s)} className="text-[11px] border border-[#D4AF37]/30 text-[#F5EDE0]/85 hover:text-[#D4AF37] hover:border-[#D4AF37]/60 rounded-full px-3 py-1.5 transition">
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
             {m.role === 'assistant' ? (
@@ -543,13 +536,13 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         )}
       </div>
 
-      {/* Bottom: single slim chat input */}
-      <div className="border-t border-[#D4AF37]/20 px-4 py-3 flex items-center gap-2 flex-shrink-0" style={{ background: NAVY }}>
-        <button onClick={toggleMic} className={`h-9 w-9 rounded-full flex items-center justify-center transition flex-shrink-0 ${listening ? 'bg-[#D4AF37] text-[#0A1628] animate-pulse' : 'border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]'}`} aria-label="voice input" title={listening ? 'Listening…' : 'Speak to Hobson'}>
+      {/* Bottom: single slim chat input — 3x taller than before */}
+      <div className="border-t border-[#D4AF37]/20 px-4 py-6 flex items-start gap-2 flex-shrink-0" style={{ background: NAVY }}>
+        <button onClick={toggleMic} className={`h-9 w-9 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 ${listening ? 'bg-[#D4AF37] text-[#0A1628] animate-pulse' : 'border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]'}`} aria-label="voice input" title={listening ? 'Listening…' : 'Speak to Hobson'}>
           {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </button>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'} className="flex-1 bg-transparent border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none rounded-full text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-4 py-2 transition" disabled={loading} />
-        <button onClick={() => send()} disabled={loading || !input.trim()} className="h-9 w-9 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0">
+        <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'} rows={4} className="flex-1 bg-transparent border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none rounded-2xl text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-4 py-2 transition resize-none leading-relaxed" disabled={loading} />
+        <button onClick={() => send()} disabled={loading || !input.trim()} className="h-9 w-9 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
           <Send className="h-4 w-4" />
         </button>
       </div>
@@ -592,9 +585,6 @@ function IdleCrossfade() {
         <img key={src} src={src} alt="" className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1800ms] ${i === idx ? 'opacity-100' : 'opacity-0'}`} />
       ))}
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0A1628]/95 via-[#0A1628]/40 to-transparent" />
-      <div className="absolute bottom-24 right-8 text-right">
-        <div style={{ fontFamily: SERIF }} className="text-[#F5EDE0]/90 italic text-lg">Hobson is listening.</div>
-      </div>
     </div>
   )
 }
@@ -603,17 +593,6 @@ function RightPanel({ tab, properties, onSaveSearch }) {
   const hasProps = properties.length > 0
   return (
     <div className="relative h-full overflow-hidden" style={{ background: NAVY }}>
-      {/* Top pill + Save Search action */}
-      <div className="absolute top-5 left-0 right-0 z-20 flex items-center justify-between px-6">
-        <div className="px-4 py-1.5 rounded-full bg-[#0A1628]/85 border border-[#D4AF37]/30 backdrop-blur-sm text-[#F5EDE0]/90 text-[10px] uppercase tracking-[0.28em] font-medium">
-          Curated · Palm Beach County
-        </div>
-        <button onClick={onSaveSearch} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0A1628]/85 border border-[#D4AF37]/40 backdrop-blur-sm text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A1628] text-[10px] uppercase tracking-[0.22em] font-medium transition">
-          <Bookmark className="h-3 w-3" />
-          Save this search
-        </button>
-      </div>
-
       {/* MAP MODE */}
       {tab === 'map' && (
         <div className="absolute inset-0 pb-[92px]">
@@ -797,7 +776,7 @@ function App() {
           <div className="flex items-center gap-3 flex-shrink-0">
             <img src={LOGOS.residential} alt="Anasa Collection" className="h-10 w-14 object-contain" />
             <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-10 w-10 object-contain" />
-            <span className="hidden xl:inline text-[#F5EDE0]/60 text-[10px] uppercase tracking-[0.28em] ml-2">VantaSure Realty</span>
+            <span className="hidden xl:inline text-[#F5EDE0] text-xl ml-2" style={{ fontFamily: SERIF, fontWeight: 500 }}>VantaSure Realty</span>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
