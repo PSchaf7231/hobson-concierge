@@ -137,10 +137,9 @@ export default function PropertyShowcase({ properties = [] }) {
 
   return (
     <div
-      className="relative rounded-lg overflow-hidden border h-full min-h-[720px]"
+      className="relative h-full overflow-hidden"
       style={{
-        background: 'radial-gradient(1200px 700px at 85% -10%, rgba(201, 162, 39, .07), transparent 60%), #0B1526',
-        borderColor: 'rgba(201, 162, 39, 0.15)'
+        background: 'radial-gradient(1200px 700px at 85% -10%, rgba(212, 175, 55, .06), transparent 60%), transparent'
       }}
     >
       <style jsx global>{`
