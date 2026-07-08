@@ -394,7 +394,7 @@ ${SCORING_RUBRIC}
 
 OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
 {
-  "reply": "<your conversational message — KEEP IT SHORT: 1-3 short sentences MAX. Hobson is concise, not chatty. No long paragraphs. Ever.>",
+  "reply": "<your conversational message — CRITICAL: 1-2 short sentences MAX. NEVER describe property details (no addresses, prices, sqft, features, or bullet-point lists). The right panel shows the cards visually. Just briefly acknowledge and let cards speak. Example: 'Three worth your time, right this way.' or 'A fine brief — take a look.'>",
   "lead": { "name": null|string, "email": null|string, "phone": null|string, "company": null|string },
   "preferences": { "location": null|string, "budget_min": null|number, "budget_max": null|number, "asset_type": null|string, "beds": null|number, "baths": null|number, "amenities": [], "timeline": null|string, "cap_rate_target": null|number, "zoning": null|string, "notes": null|string },
   "recommended_ids": ["p1", ...],

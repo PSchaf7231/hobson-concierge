@@ -178,6 +178,70 @@ function LeadCaptureModal({ open, onOpenChange, sessionId, onCaptured }) {
 }
 
 // =====================================================================
+// INLINE LEAD CAPTURE (shaded 3-field form in top nav)
+// =====================================================================
+function InlineLeadCapture() {
+  const [firstName, setFirstName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const captured = localStorage.getItem('atlas_lead_captured')
+    if (captured) {
+      setDone(true)
+      const savedName = localStorage.getItem('atlas_lead_name') || ''
+      setFirstName(savedName)
+    }
+  }, [])
+
+  async function submit() {
+    if (!firstName.trim() || !email.trim() || !phone.trim() || busy) return
+    setBusy(true)
+    try {
+      const sessionId = typeof window !== 'undefined' ? localStorage.getItem('atlas_session') : null
+      if (sessionId) {
+        await fetch(`/api/sessions/${sessionId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead: { name: firstName.trim(), email: email.trim(), phone: phone.trim() },
+            savedSearch: true
+          })
+        })
+      }
+      localStorage.setItem('atlas_lead_captured', '1')
+      localStorage.setItem('atlas_lead_name', firstName.trim())
+      setDone(true)
+    } catch (e) {} finally { setBusy(false) }
+  }
+
+  if (done) {
+    return (
+      <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] uppercase tracking-[0.2em]">
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        Search saved{firstName ? ` · ${firstName}` : ''}
+      </div>
+    )
+  }
+
+  const inputCls = "h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:bg-[#D4AF37]/15 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-[11px] px-2.5 transition"
+
+  return (
+    <div className="flex items-center gap-1.5 flex-shrink-0">
+      <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-24`} />
+      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-36`} />
+      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-36`} />
+      <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition">
+        {busy ? '…' : 'Save'}
+      </button>
+    </div>
+  )
+}
+
+// =====================================================================
 // CHAT PANEL (left half of concierge)
 // =====================================================================
 function ChatPanel({ onProperties, onViewCountUpdate }) {
@@ -407,23 +471,16 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         {leadTier && <TierBadge tier={leadTier} score={leadScore} />}
       </div>
 
-      {/* Hero copy — ~30% smaller than original 5xl/6xl, still prominent */}
-      <div className="px-6 pt-2 pb-3 flex-shrink-0">
-        <div className="inline-flex items-center gap-2 mb-1.5">
-          <div className="h-px w-6 bg-[#D4AF37]" />
-          <span className="inline-flex items-center gap-1.5 text-[#D4AF37] text-[9px] uppercase tracking-[0.32em] font-medium">
-            A Hobson-Powered Concierge
-            <MicroOrb size={14} />
-          </span>
-        </div>
-        <h1 style={{ fontFamily: SERIF, fontWeight: 500 }} className="text-[2rem] lg:text-[2.4rem] leading-[1.05] text-[#F5EDE0]">
+      {/* Hero copy — shrunk ~30% from original, sits above avatar */}
+      <div className="px-6 pt-2 pb-2 flex-shrink-0">
+        <h1 style={{ fontFamily: SERIF, fontWeight: 500 }} className="text-[1.4rem] lg:text-[1.6rem] leading-[1.15] text-[#F5EDE0]">
           Smart <span className="italic text-[#D4AF37]">Commercial</span> Investments. <span className="italic text-[#D4AF37]">Luxury</span> Homes Done Right.
         </h1>
       </div>
 
-      {/* Hobson avatar / HeyGen video slot */}
+      {/* Hobson avatar / HeyGen video slot — shorter, leaves room for chat */}
       <div className="px-6 pb-2 flex-shrink-0">
-        <div className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 aspect-[16/7] shadow-xl" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
+        <div className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 aspect-[16/5] shadow-xl" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
           <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(212,175,55,0.14), transparent 70%)' }} />
           <div className="absolute inset-0 flex items-center justify-center">
             {/* When HeyGen MP4 is provided, replace this block with:
@@ -432,8 +489,8 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
                 </video>
             */}
             <div className="text-center">
-              <div className="inline-flex h-14 w-14 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 items-center justify-center mb-1">
-                <MicroOrb size={36} />
+              <div className="inline-flex h-12 w-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 items-center justify-center mb-1">
+                <MicroOrb size={30} />
               </div>
               <div className="text-[9px] uppercase tracking-[0.3em] text-[#D4AF37]/80 font-medium">
                 Hobson · {orbSpeaking ? 'Speaking' : listening ? 'Listening' : loading ? 'Thinking' : 'Awaiting'}
@@ -444,22 +501,16 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </div>
       </div>
 
-      {/* Middle: greeting + messages + chips (scrollable) */}
+      {/* Middle: chips (when empty) + messages (scrollable) */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-3 space-y-4">
         {messages.length === 0 && (
-          <>
-            <div className="space-y-1">
-              <div className="text-[9px] uppercase tracking-[0.28em] text-[#D4AF37]/80 font-medium">Hobson</div>
-              <div style={{ fontFamily: SERIF }} className="text-[#F5EDE0] text-[1.05rem] leading-relaxed">{greeting}</div>
-            </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {suggestions.map(s => (
-                <button key={s} onClick={() => send(s)} className="text-[11px] border border-[#D4AF37]/30 text-[#F5EDE0]/85 hover:text-[#D4AF37] hover:border-[#D4AF37]/60 rounded-full px-3 py-1.5 transition">
-                  {s}
-                </button>
-              ))}
-            </div>
-          </>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map(s => (
+              <button key={s} onClick={() => send(s)} className="text-[11px] border border-[#D4AF37]/30 text-[#F5EDE0]/85 hover:text-[#D4AF37] hover:border-[#D4AF37]/60 rounded-full px-3 py-1.5 transition">
+                {s}
+              </button>
+            ))}
+          </div>
         )}
 
         {messages.map((m, i) => (
@@ -741,33 +792,31 @@ function App() {
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: NAVY }}>
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
-        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full border border-[#D4AF37] flex items-center justify-center">
-              <span style={{ fontFamily: SERIF }} className="italic text-[#D4AF37] text-lg">P</span>
-            </div>
-            <div className="text-[#F5EDE0] text-sm">
-              <span>A Hobson-Powered </span>
-              <span style={{ fontFamily: SERIF }} className="italic text-[#D4AF37]">Concierge</span>
-            </div>
-            <span className="text-[#D4AF37]/40 mx-2">|</span>
-            <span className="text-[#F5EDE0]/70 text-[11px] uppercase tracking-[0.28em]">VantaSure Realty</span>
+        <div className="max-w-[1600px] mx-auto px-6 py-2 flex items-center justify-between gap-4">
+          {/* LEFT: brand logos */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <img src={LOGOS.residential} alt="Anasa Collection" className="h-10 w-14 object-contain" />
+            <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-10 w-10 object-contain" />
+            <span className="hidden xl:inline text-[#F5EDE0]/60 text-[10px] uppercase tracking-[0.28em] ml-2">VantaSure Realty</span>
           </div>
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="bg-transparent border border-[#D4AF37]/25 h-9">
-              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-xs uppercase tracking-[0.2em]">
-                <Sparkles className="h-3 w-3 mr-1.5" />Concierge
+          {/* CENTER: tabs */}
+          <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
+            <TabsList className="bg-transparent border border-[#D4AF37]/25 h-8">
+              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
+                <Sparkles className="h-3 w-3 mr-1" />Concierge
               </TabsTrigger>
-              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-xs uppercase tracking-[0.2em]">
-                <MapIcon className="h-3 w-3 mr-1.5" />Map
+              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
+                <MapIcon className="h-3 w-3 mr-1" />Map
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="admin" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-xs uppercase tracking-[0.2em]">
-                  <Settings className="h-3 w-3 mr-1.5" />Dashboard
+                <TabsTrigger value="admin" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
+                  <Settings className="h-3 w-3 mr-1" />Dashboard
                 </TabsTrigger>
               )}
             </TabsList>
           </Tabs>
+          {/* RIGHT: inline lead capture (3 shaded fields + save) */}
+          <InlineLeadCapture />
         </div>
       </header>
 
