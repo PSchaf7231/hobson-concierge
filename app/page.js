@@ -1230,8 +1230,8 @@ function App() {
               <img src={HERO_IMG} className="w-full h-full object-cover" alt="" />
               <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A4F]/95 via-[#264B62]/85 to-[#1B3A4F]/60" />
             </div>
-            <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-5 gap-12 items-start">
-              <div className="lg:col-span-2 text-white space-y-7 pt-4">
+            <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-12 gap-8 items-start">
+              <div className="lg:col-span-5 text-white space-y-6 pt-4">
                 <div className="inline-flex items-center gap-3">
                   <div className="h-px w-12 bg-[#C9A867]" />
                   <span className="inline-flex items-center text-[#E2C285] text-[11px] uppercase tracking-[0.32em] font-medium">
@@ -1265,20 +1265,20 @@ function App() {
                   {/* Desk edge highlight */}
                   <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#C9A867]/50 to-transparent" />
                 </div>
-              </div>
 
-              {/* Hobson Voice Orb is now inline next to "A HOBSON-POWERED CONCIERGE" */}
-              <div className="lg:col-span-3 grid lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <p className="text-[#F5EDE0]/85 text-[13px] font-light leading-snug pl-1">
-                    Type what you're looking for, say it out loud, or just talk to <span className="text-[#E2C285] font-medium">Hobson</span>. He remembers what matters to you and finds listings that fit.
+                {/* Chat + Search — kept compact on LEFT so properties dominate the page */}
+                <div className="mt-6 space-y-2">
+                  <p className="text-[#F5EDE0]/85 text-[12px] font-light leading-snug pl-1">
+                    Type what you're looking for, say it out loud, or just talk to <span className="text-[#E2C285] font-medium">Hobson</span>. He remembers what matters and finds listings that fit.
                   </p>
                   <HeroSearch />
                   <ChatPanel />
                 </div>
-                <div>
-                  <PropertyShowcase properties={heroShowcase} />
-                </div>
+              </div>
+
+              {/* RIGHT column — Properties dominate (~58% of the width) */}
+              <div className="lg:col-span-7">
+                <PropertyShowcase properties={heroShowcase} />
               </div>
             </div>
           </section>
