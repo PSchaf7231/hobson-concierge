@@ -482,8 +482,13 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
       </div>
 
       {/* Hobson avatar / HeyGen video slot — portrait, centered with breathing room */}
+      {/* ⚠️ LOCKED LAYOUT (per Emergent Support directive) — DO NOT CHANGE:
+             width  = w-[75%]
+             aspect = aspect-[16/9]
+             padding = px-6 pb-6
+         Any adjustment here regresses the Concierge window and MUST be re-approved. */}
       <div className="px-6 pb-6 flex-shrink-0 flex justify-center">
-        <div className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
+        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
           <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(212,175,55,0.14), transparent 70%)' }} />
           <div className="absolute inset-0 flex items-center justify-center">
             {/* When HeyGen MP4 is provided, replace this block with:

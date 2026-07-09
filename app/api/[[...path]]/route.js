@@ -281,15 +281,18 @@ async function fetchLiveMLS({ prefs = {}, limit = 40 } = {}) {
   if (prefs.beds) filters.push(`BedroomsTotal ge ${Number(prefs.beds)}`)
   if (prefs.baths) filters.push(`BathroomsTotalInteger ge ${Number(prefs.baths)}`)
   const filter = encodeURIComponent(filters.join(' and '))
+  // NOTE (Emergent Support fix): "Media" cannot appear in $select — it must be
+  // requested via $expand=Media. Including it in $select causes a 400 error
+  // from Spark RESO which used to drop us back to the Boca demo seed.
   const select = encodeURIComponent([
     'ListingKey','ListingId','ListPrice','StandardStatus',
     'BedroomsTotal','BathroomsTotalInteger','LivingArea',
     'StreetNumber','StreetName','StreetSuffix','UnitNumber','City','StateOrProvince','PostalCode',
     'PublicRemarks','PropertyType','PropertySubType','YearBuilt','LotSizeAcres',
-    'ListAgentFirstName','ListAgentLastName','ListOfficeName','Media',
+    'ListAgentFirstName','ListAgentLastName','ListOfficeName',
     'Latitude','Longitude','VirtualTourURLUnbranded','PhotosCount','ModificationTimestamp'
   ].join(','))
-  const url = `${base}/Property?$top=${limit}&$filter=${filter}&$select=${select}&$orderby=ListPrice desc`
+  const url = `${base}/Property?$top=${limit}&$filter=${filter}&$select=${select}&$expand=Media&$orderby=ListPrice desc`
 
   const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
@@ -731,7 +734,18 @@ async function handleRoute(request, { params }) {
       session.messages.push({ role: 'user', content: message, ts: new Date().toISOString() })
       const recent = session.messages.slice(-30)
 
-      const propsCatalog = await getLiveCatalog(db, session.preferences || {})
+      // Map Claude's preference keys (location/budget_min/budget_max) to
+      // Spark filter keys (city/budgetMin/budgetMax) so the live IDX feed
+      // actually filters on the user's real search criteria.
+      const rawPrefs = session.preferences || {}
+      const mappedPrefs = {
+        city: rawPrefs.city || rawPrefs.location || null,
+        budgetMin: rawPrefs.budgetMin ?? rawPrefs.budget_min ?? null,
+        budgetMax: rawPrefs.budgetMax ?? rawPrefs.budget_max ?? null,
+        beds: rawPrefs.beds ?? null,
+        baths: rawPrefs.baths ?? null
+      }
+      const propsCatalog = await getLiveCatalog(db, mappedPrefs)
       const brokerSettings = await db.collection('settings').findOne({ id: 'global' })
       const knownBroker = brokerSettings?.broker || null
 
