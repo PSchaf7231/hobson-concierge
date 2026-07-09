@@ -498,9 +498,10 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
             onClick={() => {
               const v = window.__hobsonVideo
               if (!v) return
+              v.muted = false
               if (v.paused) v.play(); else v.pause()
             }}
-            title="Play / pause video"
+            title="Play / pause (unmutes on first click)"
             className="absolute top-2 right-2 z-10 h-6 w-6 rounded-full bg-[#0A1628]/80 hover:bg-[#0A1628] backdrop-blur-sm border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] font-semibold flex items-center justify-center transition"
           >
             P
