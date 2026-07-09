@@ -465,11 +465,12 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         {leadTier && <TierBadge tier={leadTier} score={leadScore} />}
       </div>
 
-      {/* Hero copy — bumped up 1-2 sizes for prominence */}
-      <div className="px-6 pt-3 pb-4 flex-shrink-0">
-        <h1 style={{ fontFamily: SERIF, fontWeight: 500 }} className="text-[1.75rem] lg:text-[2rem] leading-[1.15] text-[#F5EDE0]">
-          Smart <span className="italic text-[#D4AF37]">Commercial</span> Investments. <span className="italic text-[#D4AF37]">Luxury</span> Homes Done Right.
-        </h1>
+      {/* Hero copy — two lines, "Luxury" starts under end of "Commercial" */}
+      <div className="px-6 pt-3 pb-4 flex-shrink-0 flex justify-center">
+        <div style={{ fontFamily: SERIF, fontWeight: 500 }} className="inline-block text-left text-[1.75rem] lg:text-[2rem] leading-[1.2] text-[#F5EDE0]">
+          <div>Smart <span className="italic text-[#D4AF37]">Commercial</span> Investments.</div>
+          <div className="pl-[7.8em]"><span className="italic text-[#D4AF37]">Luxury</span> Homes Done Right.</div>
+        </div>
       </div>
 
       {/* Hobson avatar / HeyGen video slot — portrait, centered with breathing room */}
