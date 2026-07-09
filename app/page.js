@@ -294,12 +294,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
     if (captured) setLeadCaptured(true)
   }, [])
 
-  // External "Save this search" button (from right panel) opens modal
-  useEffect(() => {
-    const openCapture = () => setCaptureOpen(true)
-    window.addEventListener('hobson:save-search', openCapture)
-    return () => window.removeEventListener('hobson:save-search', openCapture)
-  }, [])
+  // Lead capture lives ONLY in the nav-bar (4 shaded input boxes). No pop-ups.
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -429,11 +424,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
       setFavIds(new Set((data.favorites || []).map(f => f.id)))
       setLeadTier(data.lead_tier)
       setLeadScore(data.lead_score)
-      // Auto-trigger lead capture after 3+ user messages (substantive exchange)
-      const userMsgCount = newMsgs.filter(m => m.role === 'user').length
-      if (userMsgCount >= 3 && !leadCaptured) {
-        setTimeout(() => setCaptureOpen(true), 1200)
-      }
+      // Lead capture is nav-bar-only — no intrusive center-screen pop-ups anywhere.
     } catch (e) {
       setMessages([...newMsgs, { role: 'assistant', content: 'Connection issue. Try again?' }])
     } finally {
@@ -474,9 +465,9 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         {leadTier && <TierBadge tier={leadTier} score={leadScore} />}
       </div>
 
-      {/* Hero copy — shrunk ~30% from original, sits above avatar */}
-      <div className="px-6 pt-2 pb-2 flex-shrink-0">
-        <h1 style={{ fontFamily: SERIF, fontWeight: 500 }} className="text-[1.4rem] lg:text-[1.6rem] leading-[1.15] text-[#F5EDE0]">
+      {/* Hero copy — bumped up 1-2 sizes for prominence */}
+      <div className="px-6 pt-3 pb-4 flex-shrink-0">
+        <h1 style={{ fontFamily: SERIF, fontWeight: 500 }} className="text-[1.75rem] lg:text-[2rem] leading-[1.15] text-[#F5EDE0]">
           Smart <span className="italic text-[#D4AF37]">Commercial</span> Investments. <span className="italic text-[#D4AF37]">Luxury</span> Homes Done Right.
         </h1>
       </div>
@@ -487,7 +478,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
              aspect = aspect-[16/9]
              padding = px-6 pb-6
          Any adjustment here regresses the Concierge window and MUST be re-approved. */}
-      <div className="px-6 pb-6 flex-shrink-0 flex justify-center">
+      <div className="px-6 pt-3 pb-6 flex-shrink-0 flex justify-center">
         <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
           <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(212,175,55,0.14), transparent 70%)' }} />
           <div className="absolute inset-0 flex items-center justify-center">
@@ -541,15 +532,17 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         )}
       </div>
 
-      {/* Bottom: single slim chat input — 3x taller than before */}
-      <div className="border-t border-[#D4AF37]/20 px-4 py-6 flex items-start gap-2 flex-shrink-0" style={{ background: NAVY }}>
-        <button onClick={toggleMic} className={`h-9 w-9 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 ${listening ? 'bg-[#D4AF37] text-[#0A1628] animate-pulse' : 'border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]'}`} aria-label="voice input" title={listening ? 'Listening…' : 'Speak to Hobson'}>
-          {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-        </button>
-        <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'} rows={4} className="flex-1 bg-transparent border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none rounded-2xl text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-4 py-2 transition resize-none leading-relaxed" disabled={loading} />
-        <button onClick={() => send()} disabled={loading || !input.trim()} className="h-9 w-9 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
-          <Send className="h-4 w-4" />
-        </button>
+      {/* Bottom: chat box — matches Hobson video width (75%), centered, taller, lifted from bottom edge */}
+      <div className="px-6 pt-3 pb-6 flex-shrink-0 flex justify-center">
+        <div className="w-[75%] rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg flex items-start gap-2 p-3">
+          <button onClick={toggleMic} className={`h-10 w-10 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 ${listening ? 'bg-[#D4AF37] text-[#0A1628] animate-pulse' : 'border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]'}`} aria-label="voice input" title={listening ? 'Listening…' : 'Speak to Hobson'}>
+            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </button>
+          <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'} rows={5} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-2 transition resize-none leading-relaxed" disabled={loading} />
+          <button onClick={() => send()} disabled={loading || !input.trim()} className="h-10 w-10 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <PropertyDetailDialog
@@ -559,16 +552,6 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         isFavorite={viewProperty ? favIds.has(viewProperty.id) : false}
         onToggleFavorite={toggleFavorite}
         onAskAtlas={(p) => send(`Tell me more about ${p.title} in ${p.city} and how soon I could see it`)}
-      />
-
-      <LeadCaptureModal
-        open={captureOpen}
-        onOpenChange={setCaptureOpen}
-        sessionId={sessionId}
-        onCaptured={() => {
-          setLeadCaptured(true)
-          try { localStorage.setItem('atlas_lead_captured', '1') } catch (e) {}
-        }}
       />
     </div>
   )
