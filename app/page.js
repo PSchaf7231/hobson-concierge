@@ -480,22 +480,21 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
              padding = px-6 pb-6
          Any adjustment here regresses the Concierge window and MUST be re-approved. */}
       <div className="px-6 pt-3 pb-6 flex-shrink-0 flex justify-center">
-        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: 'linear-gradient(to bottom, #0B1526, #0f1e35)' }}>
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(212,175,55,0.14), transparent 70%)' }} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            {/* When HeyGen MP4 is provided, replace this block with:
-                <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-                  <source src="/hobson-avatar.mp4" type="video/mp4" />
-                </video>
-            */}
-            <div className="text-center">
-              <div className="inline-flex h-12 w-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 items-center justify-center mb-1">
-                <MicroOrb size={30} />
-              </div>
-              <div className="text-[9px] uppercase tracking-[0.3em] text-[#D4AF37]/80 font-medium">
-                Hobson · {orbSpeaking ? 'Speaking' : listening ? 'Listening' : loading ? 'Thinking' : 'Awaiting'}
-              </div>
-            </div>
+        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: '#0B1526' }}>
+          {/* HeyGen recorded avatar — autoplays on loop, muted (browser policy). */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            poster=""
+          >
+            <source src="/hobson-avatar.mp4" type="video/mp4" />
+          </video>
+          {/* Tiny status pill so users still see Hobson's state (listening/speaking/thinking) */}
+          <div className="absolute bottom-2 right-3 z-10 px-2 py-0.5 rounded-full bg-[#0A1628]/80 backdrop-blur-sm border border-[#D4AF37]/30 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37]/90 font-medium">
+            Hobson · {orbSpeaking ? 'Speaking' : listening ? 'Listening' : loading ? 'Thinking' : 'Online'}
           </div>
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
         </div>
