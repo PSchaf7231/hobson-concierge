@@ -483,6 +483,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: '#0B1526' }}>
           {/* HeyGen recorded avatar — autoplays on loop, muted (browser policy). */}
           <video
+            ref={(el) => { if (el) window.__hobsonVideo = el }}
             autoPlay
             loop
             muted
@@ -492,6 +493,18 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
           >
             <source src="/hobson-avatar.mp4" type="video/mp4" />
           </video>
+          {/* Play / Pause toggle — small "P" pill, top-right of video */}
+          <button
+            onClick={() => {
+              const v = window.__hobsonVideo
+              if (!v) return
+              if (v.paused) v.play(); else v.pause()
+            }}
+            title="Play / pause video"
+            className="absolute top-2 right-2 z-10 h-6 w-6 rounded-full bg-[#0A1628]/80 hover:bg-[#0A1628] backdrop-blur-sm border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] font-semibold flex items-center justify-center transition"
+          >
+            P
+          </button>
           {/* Tiny status pill so users still see Hobson's state (listening/speaking/thinking) */}
           <div className="absolute bottom-2 right-3 z-10 px-2 py-0.5 rounded-full bg-[#0A1628]/80 backdrop-blur-sm border border-[#D4AF37]/30 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37]/90 font-medium">
             Hobson · {orbSpeaking ? 'Speaking' : listening ? 'Listening' : loading ? 'Thinking' : 'Online'}
