@@ -500,48 +500,52 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </div>
       </div>
 
-      {/* Middle: messages (scrollable) — chips removed */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-3 space-y-4">
-        {messages.map((m, i) => (
-          <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
-            {m.role === 'assistant' ? (
-              <div className="space-y-1 max-w-full">
-                <div className="text-[9px] uppercase tracking-[0.28em] text-[#D4AF37]/80 font-medium flex items-center gap-2">
-                  Hobson
-                  <button onClick={() => playVoice(m.content, i)} className="inline-flex items-center justify-center h-5 w-5 rounded-full hover:bg-[#D4AF37]/20 transition" title={speakingIdx === i ? 'Stop' : 'Hear Hobson speak'}>
-                    {speakingIdx === i ? <Loader2 className="h-3 w-3 text-[#D4AF37] animate-spin" /> : <Volume2 className="h-3 w-3 text-[#D4AF37]/60 hover:text-[#D4AF37]" />}
-                  </button>
-                </div>
-                <div style={{ fontFamily: SERIF }} className="text-[#F5EDE0] text-[1.05rem] leading-relaxed whitespace-pre-wrap">{m.content}</div>
+      {/* Middle + Bottom UNIFIED: one chat box containing scrollable history AND input.
+          Width matches Hobson video (75%), centered, fills the remaining vertical space. */}
+      <div className="flex-1 min-h-0 px-6 pt-3 pb-6 flex justify-center">
+        <div className="w-[75%] flex flex-col min-h-0 rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg overflow-hidden">
+          {/* Scrollable message history — scrollbar is INSIDE this box */}
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4 hobson-scroll">
+            {messages.map((m, i) => (
+              <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
+                {m.role === 'assistant' ? (
+                  <div className="space-y-1 max-w-full">
+                    <div className="text-[9px] uppercase tracking-[0.28em] text-[#D4AF37]/80 font-medium flex items-center gap-2">
+                      Hobson
+                      <button onClick={() => playVoice(m.content, i)} className="inline-flex items-center justify-center h-5 w-5 rounded-full hover:bg-[#D4AF37]/20 transition" title={speakingIdx === i ? 'Stop' : 'Hear Hobson speak'}>
+                        {speakingIdx === i ? <Loader2 className="h-3 w-3 text-[#D4AF37] animate-spin" /> : <Volume2 className="h-3 w-3 text-[#D4AF37]/60 hover:text-[#D4AF37]" />}
+                      </button>
+                    </div>
+                    <div style={{ fontFamily: SERIF }} className="text-[#F5EDE0] text-[1.05rem] leading-relaxed whitespace-pre-wrap">{m.content}</div>
+                  </div>
+                ) : (
+                  <div className="bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#F5EDE0] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[85%] text-sm leading-relaxed whitespace-pre-wrap">{m.content}</div>
+                )}
               </div>
-            ) : (
-              <div className="bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#F5EDE0] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[85%] text-sm leading-relaxed whitespace-pre-wrap">{m.content}</div>
+            ))}
+
+            {loading && (
+              <div className="space-y-1">
+                <div className="text-[9px] uppercase tracking-[0.28em] text-[#D4AF37]/80 font-medium">Hobson</div>
+                <span className="inline-flex gap-1 pt-1">
+                  <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-bounce" />
+                  <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-bounce" style={{ animationDelay: '120ms' }} />
+                  <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-bounce" style={{ animationDelay: '240ms' }} />
+                </span>
+              </div>
             )}
           </div>
-        ))}
 
-        {loading && (
-          <div className="space-y-1">
-            <div className="text-[9px] uppercase tracking-[0.28em] text-[#D4AF37]/80 font-medium">Hobson</div>
-            <span className="inline-flex gap-1 pt-1">
-              <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-bounce" />
-              <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-bounce" style={{ animationDelay: '120ms' }} />
-              <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-bounce" style={{ animationDelay: '240ms' }} />
-            </span>
+          {/* Input row — anchored at the bottom of the same box */}
+          <div className="border-t border-[#D4AF37]/20 flex items-start gap-2 p-3 flex-shrink-0">
+            <button onClick={toggleMic} className={`h-10 w-10 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 ${listening ? 'bg-[#D4AF37] text-[#0A1628] animate-pulse' : 'border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]'}`} aria-label="voice input" title={listening ? 'Listening…' : 'Speak to Hobson'}>
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+            <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'} rows={3} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-2 transition resize-none leading-relaxed" disabled={loading} />
+            <button onClick={() => send()} disabled={loading || !input.trim()} className="h-10 w-10 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
+              <Send className="h-4 w-4" />
+            </button>
           </div>
-        )}
-      </div>
-
-      {/* Bottom: chat box — matches Hobson video width (75%), centered, taller, lifted from bottom edge */}
-      <div className="px-6 pt-3 pb-6 flex-shrink-0 flex justify-center">
-        <div className="w-[75%] rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg flex items-start gap-2 p-3">
-          <button onClick={toggleMic} className={`h-10 w-10 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 ${listening ? 'bg-[#D4AF37] text-[#0A1628] animate-pulse' : 'border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]'}`} aria-label="voice input" title={listening ? 'Listening…' : 'Speak to Hobson'}>
-            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </button>
-          <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'} rows={5} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-2 transition resize-none leading-relaxed" disabled={loading} />
-          <button onClick={() => send()} disabled={loading || !input.trim()} className="h-10 w-10 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
-            <Send className="h-4 w-4" />
-          </button>
         </div>
       </div>
 

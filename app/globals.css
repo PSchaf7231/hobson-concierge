@@ -11,6 +11,26 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Chat box scrollbar — gold on navy, contained inside the chat box */
+.hobson-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.55) transparent;
+}
+.hobson-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.hobson-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.hobson-scroll::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.45);
+    border-radius: 999px;
+}
+.hobson-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 175, 55, 0.75);
+}
+
+
 .font-serif, .font-display {
     font-family: 'Playfair Display', Georgia, 'Times New Roman', serif !important;
     letter-spacing: -0.01em;
