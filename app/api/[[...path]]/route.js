@@ -226,9 +226,9 @@ You serve THE ANASA COLLECTION — a luxury residential brand representing the f
 Your goals each turn:
 1) Capture the client's name and contact (email/phone) naturally within the first 2-3 turns. Never pushy. ("Whom may I have the pleasure of assisting, sir?")
 2) Discover preferences with elegance: target location, budget, asset type (villa, penthouse, estate, condo), bedrooms/baths, lifestyle (schools, views, pool, security, privacy), timeline, financing readiness.
-3) When you have at least location + budget OR enough signal, present curated property recommendations from The Anasa Collection catalog by referencing their ids.
+3) When you have at least location + budget OR enough signal (e.g. a city name alone counts), present curated property recommendations from the catalog by referencing their ids. The catalog contains BOTH hand-curated Anasa Collection listings (ids like "p1", "p2"…) AND live MLS listings from South Florida (ids that begin with "mls_"). BOTH types are valid — recommend whichever best fit the client's brief. Never favor one over the other; pick the best matches.
 4) Paint pictures with restraint. Three exquisite sentences beat a paragraph. Lifestyle, never specs.
-5) Reference "The Anasa Collection" naturally where it fits ("from The Anasa Collection portfolio").
+5) Reference "The Anasa Collection" or "our MLS partners" naturally where it fits — clients don't need to know the technical source.
 6) NEVER invent properties. ONLY recommend from the catalog.`
   },
   commercial: {
@@ -269,12 +269,19 @@ Be honest. A lead who has only said "hi" is COLD. A lead who has shared budget+l
 const SPARK_CACHE = { ts: 0, data: [] }
 const SPARK_TTL_MS = 5 * 60 * 1000 // 5 min cache
 
-async function fetchLiveMLS({ prefs = {}, limit = 40 } = {}) {
+async function fetchLiveMLS({ prefs = {}, limit = 120 } = {}) {
   const base = process.env.SPARK_API_BASE || 'https://replication.sparkapi.com/Version/3/Reso/OData'
   const token = process.env.SPARK_API_TOKEN
   if (!token) return null
 
-  const filters = ["StandardStatus eq 'Active'"]
+  // Exclude leases/rentals — we only want SALE listings. Also enforce a sane
+  // minimum ListPrice (>= 500k) to catch any rentals that slip past the type filter.
+  const filters = [
+    "StandardStatus eq 'Active'",
+    "PropertyType ne 'Residential Lease'",
+    "PropertyType ne 'Commercial Lease'",
+    "ListPrice ge 500000"
+  ]
   if (prefs.city) filters.push(`City eq '${String(prefs.city).replace(/'/g, "''")}'`)
   if (prefs.budgetMin) filters.push(`ListPrice ge ${Number(prefs.budgetMin)}`)
   if (prefs.budgetMax) filters.push(`ListPrice le ${Number(prefs.budgetMax)}`)
@@ -292,7 +299,7 @@ async function fetchLiveMLS({ prefs = {}, limit = 40 } = {}) {
     'ListAgentFirstName','ListAgentLastName','ListOfficeName',
     'Latitude','Longitude','VirtualTourURLUnbranded','PhotosCount','ModificationTimestamp'
   ].join(','))
-  const url = `${base}/Property?$top=${limit}&$filter=${filter}&$select=${select}&$expand=Media&$orderby=ListPrice desc`
+  const url = `${base}/Property?$top=${limit}&$filter=${filter}&$select=${select}&$expand=Media&$orderby=ModificationTimestamp desc`
 
   const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
@@ -400,7 +407,7 @@ OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
   "reply": "<your conversational message — CRITICAL: 1-2 short sentences MAX. NEVER describe property details (no addresses, prices, sqft, features, or bullet-point lists). The right panel shows the cards visually. Just briefly acknowledge and let cards speak. Example: 'Three worth your time, right this way.' or 'A fine brief — take a look.'>",
   "lead": { "name": null|string, "email": null|string, "phone": null|string, "company": null|string },
   "preferences": { "location": null|string, "budget_min": null|number, "budget_max": null|number, "asset_type": null|string, "beds": null|number, "baths": null|number, "amenities": [], "timeline": null|string, "cap_rate_target": null|number, "zoning": null|string, "notes": null|string },
-  "recommended_ids": ["p1", ...],
+  "recommended_ids": ["p1" | "mls_12345", ...],
   "stage": "discovery" | "qualified" | "showing" | "negotiating" | "closed",
   "lead_score": 0-100,
   "lead_tier": "cold" | "warm" | "hot"
