@@ -745,10 +745,59 @@ async function handleRoute(request, { params }) {
       // Spark filter keys (city/budgetMin/budgetMax) so the live IDX feed
       // actually filters on the user's real search criteria.
       const rawPrefs = session.preferences || {}
+
+      // FIRST-TURN CITY EXTRACTION: on turn 1 the AI hasn't parsed preferences
+      // yet, so the initial Spark pull would be global (only ~6 Delray
+      // listings in the 200-cap). Scan the user's live message for known
+      // South Florida city names and inject BEFORE the Spark call so we pull
+      // city-specific inventory (up to 200 Delray, 200 Miami, etc.).
+      const SFL_CITIES = [
+        'Delray Beach','Boca Raton','Palm Beach','West Palm Beach','Palm Beach Gardens',
+        'Wellington','Jupiter','Manalapan','Lantana','Lake Worth','Highland Beach',
+        'Boynton Beach','Ocean Ridge','Hypoluxo','Gulf Stream','Loxahatchee','Tequesta',
+        'Miami','Miami Beach','Coral Gables','Coconut Grove','Key Biscayne','Pinecrest',
+        'Palmetto Bay','Bal Harbour','Bay Harbor Islands','Surfside','Sunny Isles Beach',
+        'Aventura','Golden Beach','North Miami','North Miami Beach','South Miami',
+        'Doral','Hialeah','Homestead','Cutler Bay','Miami Shores','Fisher Island',
+        'Fort Lauderdale','Hollywood','Hallandale Beach','Davie','Southwest Ranches',
+        'Weston','Plantation','Coral Springs','Parkland','Pompano Beach','Lighthouse Point',
+        'Deerfield Beach','Cooper City','Dania Beach','Sunrise','Tamarac','Wilton Manors',
+        'Naples','Marco Island','Bonita Springs','Estero','Sarasota','Longboat Key',
+        'Vero Beach','Stuart','Hobe Sound'
+      ]
+      const msgLc = ' ' + String(message || '').toLowerCase() + ' '
+      let extractedCity = null
+      // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
+      for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
+        if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
+            msgLc.includes(' ' + city.toLowerCase() + ',') ||
+            msgLc.includes(' ' + city.toLowerCase() + '.') ||
+            msgLc.includes(' ' + city.toLowerCase() + '?')) {
+          extractedCity = city
+          break
+        }
+      }
+      // Extract budget hints ($3M, $2-5M, $4 million, etc.)
+      let extractedBudgetMin = null, extractedBudgetMax = null
+      const rangeMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(?:m|million|mm)?\s*(?:-|to|and)\s*\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
+      if (rangeMatch) {
+        const mult = /k/i.test(rangeMatch[3]) ? 1000 : 1_000_000
+        extractedBudgetMin = Math.round(parseFloat(rangeMatch[1]) * mult)
+        extractedBudgetMax = Math.round(parseFloat(rangeMatch[2]) * mult)
+      } else {
+        const singleMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
+        if (singleMatch) {
+          const mult = /k/i.test(singleMatch[2]) ? 1000 : 1_000_000
+          const val = Math.round(parseFloat(singleMatch[1]) * mult)
+          extractedBudgetMin = Math.round(val * 0.75)
+          extractedBudgetMax = Math.round(val * 1.25)
+        }
+      }
+
       const mappedPrefs = {
-        city: rawPrefs.city || rawPrefs.location || null,
-        budgetMin: rawPrefs.budgetMin ?? rawPrefs.budget_min ?? null,
-        budgetMax: rawPrefs.budgetMax ?? rawPrefs.budget_max ?? null,
+        city: rawPrefs.city || rawPrefs.location || extractedCity || null,
+        budgetMin: rawPrefs.budgetMin ?? rawPrefs.budget_min ?? extractedBudgetMin ?? null,
+        budgetMax: rawPrefs.budgetMax ?? rawPrefs.budget_max ?? extractedBudgetMax ?? null,
         beds: rawPrefs.beds ?? null,
         baths: rawPrefs.baths ?? null
       }
