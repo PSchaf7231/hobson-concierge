@@ -358,7 +358,7 @@ async function getLiveCatalog(db, prefs = {}) {
       return SPARK_CACHE.data
     }
     try {
-      const live = await fetchLiveMLS({ prefs, limit: 40 })
+      const live = await fetchLiveMLS({ prefs, limit: 200 })
       if (live && live.length > 0) {
         SPARK_CACHE.ts = now
         SPARK_CACHE.key = cacheKey
