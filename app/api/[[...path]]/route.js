@@ -282,6 +282,7 @@ async function fetchLiveMLS({ prefs = {}, limit = 120 } = {}) {
     "PropertyType ne 'Commercial Lease'",
     "ListPrice ge 500000"
   ]
+  if (prefs.county) filters.push(`CountyOrParish eq '${String(prefs.county).replace(/'/g, "''")}'`)
   if (prefs.city) filters.push(`City eq '${String(prefs.city).replace(/'/g, "''")}'`)
   if (prefs.budgetMin) filters.push(`ListPrice ge ${Number(prefs.budgetMin)}`)
   if (prefs.budgetMax) filters.push(`ListPrice le ${Number(prefs.budgetMax)}`)
@@ -362,6 +363,36 @@ async function getLiveCatalog(db, prefs = {}) {
   }
   // Fallback ONLY if Spark unreachable: local seed (hand-curated Anasa listings)
   return await db.collection('properties').find({}).toArray()
+}
+
+// ============= LIVE IDX SEARCH =============
+// Direct real-time query to Spark RESO Web API. NEVER writes to MongoDB.
+// Takes a preferences object (location, budget_min, budget_max, beds) and
+// applies defaults (Palm Beach County, $400,000 – $10,000,000) when nothing set.
+// Returns live JSON straight to Hobson. Callers must handle fallback themselves.
+async function liveIdxSearch({ preferences = {} } = {}) {
+  if (!process.env.SPARK_API_TOKEN) return null
+
+  const loc = preferences.location || preferences.city || preferences.county || 'Palm Beach County'
+  const isCounty = /county|parish/i.test(loc)
+  const budgetMin = preferences.budget_min ?? preferences.budgetMin ?? 400000
+  const budgetMax = preferences.budget_max ?? preferences.budgetMax ?? 10_000_000
+  const beds = preferences.beds ?? null
+  const baths = preferences.baths ?? null
+
+  const prefs = {
+    city: isCounty ? null : loc,
+    county: isCounty ? loc.replace(/\s*county\s*/i, '').trim() : null,
+    budgetMin, budgetMax, beds, baths
+  }
+
+  try {
+    const live = await fetchLiveMLS({ prefs, limit: 200 })
+    return live || []
+  } catch (e) {
+    console.error('[liveIdxSearch] error:', e.message)
+    return null
+  }
 }
 
 // ============= LLM CALL =============
@@ -782,13 +813,18 @@ async function handleRoute(request, { params }) {
       }
 
       const mappedPrefs = {
-        city: rawPrefs.city || rawPrefs.location || extractedCity || null,
-        budgetMin: rawPrefs.budgetMin ?? rawPrefs.budget_min ?? extractedBudgetMin ?? null,
-        budgetMax: rawPrefs.budgetMax ?? rawPrefs.budget_max ?? extractedBudgetMax ?? null,
+        location: rawPrefs.location || rawPrefs.city || extractedCity || null,
+        budget_min: rawPrefs.budget_min ?? rawPrefs.budgetMin ?? extractedBudgetMin ?? null,
+        budget_max: rawPrefs.budget_max ?? rawPrefs.budgetMax ?? extractedBudgetMax ?? null,
         beds: rawPrefs.beds ?? null,
         baths: rawPrefs.baths ?? null
       }
-      const propsCatalog = await getLiveCatalog(db, mappedPrefs)
+      // LIVE IDX pass-through — no DB storage. Falls back to local seed only if
+      // Spark is disabled or the live query fails.
+      let propsCatalog = await liveIdxSearch({ preferences: mappedPrefs })
+      if (!propsCatalog || propsCatalog.length === 0) {
+        propsCatalog = await db.collection('properties').find({}).toArray()
+      }
       const brokerSettings = await db.collection('settings').findOne({ id: 'global' })
       const knownBroker = brokerSettings?.broker || null
 
