@@ -350,30 +350,17 @@ function mapResoToHobson(r) {
 }
 
 async function getLiveCatalog(db, prefs = {}) {
-  // Try Spark first, fall back to DB seed if it fails or returns nothing
+  // Direct pass-through: fetch fresh from Spark on every call.
+  // NO Mongo persistence. NO DB sync. Live JSON straight to Hobson.
   if (process.env.SPARK_API_TOKEN) {
-    const now = Date.now()
-    const cacheKey = JSON.stringify(prefs || {})
-    if (SPARK_CACHE.key === cacheKey && (now - SPARK_CACHE.ts) < SPARK_TTL_MS && SPARK_CACHE.data.length > 0) {
-      return SPARK_CACHE.data
-    }
     try {
       const live = await fetchLiveMLS({ prefs, limit: 200 })
-      if (live && live.length > 0) {
-        SPARK_CACHE.ts = now
-        SPARK_CACHE.key = cacheKey
-        SPARK_CACHE.data = live
-        // Cache to DB too so property lookups by id work later
-        for (const p of live) {
-          try { await db.collection('properties').updateOne({ id: p.id }, { $set: p }, { upsert: true }) } catch (e) {}
-        }
-        return live
-      }
+      if (live && live.length > 0) return live
     } catch (e) {
       console.error('[SparkAPI] Fetch error:', e.message)
     }
   }
-  // Fallback: local seed
+  // Fallback ONLY if Spark unreachable: local seed (hand-curated Anasa listings)
   return await db.collection('properties').find({}).toArray()
 }
 
