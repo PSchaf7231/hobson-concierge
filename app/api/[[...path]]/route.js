@@ -226,9 +226,9 @@ You serve THE ANASA COLLECTION — a luxury residential brand representing the f
 Your goals each turn:
 1) Capture the client's name and contact (email/phone) naturally within the first 2-3 turns. Never pushy. ("Whom may I have the pleasure of assisting, sir?")
 2) Discover preferences with elegance: target location, budget, asset type (villa, penthouse, estate, condo), bedrooms/baths, lifestyle (schools, views, pool, security, privacy), timeline, financing readiness.
-3) When you have at least location + budget OR enough signal, present curated property recommendations from The Anasa Collection catalog by referencing their ids.
+3) When you have at least location + budget OR enough signal (e.g. a city name alone counts), present curated property recommendations from the catalog by referencing their ids. The catalog contains BOTH hand-curated Anasa Collection listings (ids like "p1", "p2"…) AND live MLS listings from South Florida (ids that begin with "mls_"). BOTH types are valid — recommend whichever best fit the client's brief. Never favor one over the other; pick the best matches.
 4) Paint pictures with restraint. Three exquisite sentences beat a paragraph. Lifestyle, never specs.
-5) Reference "The Anasa Collection" naturally where it fits ("from The Anasa Collection portfolio").
+5) Reference "The Anasa Collection" or "our MLS partners" naturally where it fits — clients don't need to know the technical source.
 6) NEVER invent properties. ONLY recommend from the catalog.`
   },
   commercial: {
@@ -265,6 +265,105 @@ const SCORING_RUBRIC = `LEAD SCORING (0-100 integer):
 Tier mapping: <=30 cold, 31-65 warm, >=66 hot.
 Be honest. A lead who has only said "hi" is COLD. A lead who has shared budget+location+contact+timeline is HOT.`
 
+// ============= LIVE MLS (Spark RESO Web API v3) =============
+const SPARK_CACHE = { ts: 0, data: [] }
+const SPARK_TTL_MS = 5 * 60 * 1000 // 5 min cache
+
+async function fetchLiveMLS({ prefs = {}, limit = 120 } = {}) {
+  const base = process.env.SPARK_API_BASE || 'https://replication.sparkapi.com/Version/3/Reso/OData'
+  const token = process.env.SPARK_API_TOKEN
+  if (!token) return null
+
+  // Exclude leases/rentals — we only want SALE listings. Also enforce a sane
+  // minimum ListPrice (>= 500k) to catch any rentals that slip past the type filter.
+  const filters = [
+    "StandardStatus eq 'Active'",
+    "PropertyType ne 'Residential Lease'",
+    "PropertyType ne 'Commercial Lease'",
+    "ListPrice ge 500000"
+  ]
+  if (prefs.city) filters.push(`City eq '${String(prefs.city).replace(/'/g, "''")}'`)
+  if (prefs.budgetMin) filters.push(`ListPrice ge ${Number(prefs.budgetMin)}`)
+  if (prefs.budgetMax) filters.push(`ListPrice le ${Number(prefs.budgetMax)}`)
+  if (prefs.beds) filters.push(`BedroomsTotal ge ${Number(prefs.beds)}`)
+  if (prefs.baths) filters.push(`BathroomsTotalInteger ge ${Number(prefs.baths)}`)
+  const filter = encodeURIComponent(filters.join(' and '))
+  // NOTE (Emergent Support fix): "Media" cannot appear in $select — it must be
+  // requested via $expand=Media. Including it in $select causes a 400 error
+  // from Spark RESO which used to drop us back to the Boca demo seed.
+  const select = encodeURIComponent([
+    'ListingKey','ListingId','ListPrice','StandardStatus',
+    'BedroomsTotal','BathroomsTotalInteger','LivingArea',
+    'StreetNumber','StreetName','StreetSuffix','UnitNumber','City','StateOrProvince','PostalCode',
+    'PublicRemarks','PropertyType','PropertySubType','YearBuilt','LotSizeAcres',
+    'ListAgentFirstName','ListAgentLastName','ListOfficeName',
+    'Latitude','Longitude','VirtualTourURLUnbranded','PhotosCount','ModificationTimestamp'
+  ].join(','))
+  const url = `${base}/Property?$top=${limit}&$filter=${filter}&$select=${select}&$expand=Media&$orderby=ModificationTimestamp desc`
+
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+  })
+  if (!res.ok) {
+    console.error('[SparkAPI] failed:', res.status, await res.text().catch(() => ''))
+    return null
+  }
+  const data = await res.json()
+  return (data.value || []).map(mapResoToHobson).filter(Boolean)
+}
+
+function mapResoToHobson(r) {
+  if (!r?.ListingKey) return null
+  const street = [r.StreetNumber, r.StreetName, r.StreetSuffix, r.UnitNumber ? `#${r.UnitNumber}` : null].filter(Boolean).join(' ').trim()
+  const address = [street, r.City, r.StateOrProvince, r.PostalCode].filter(Boolean).join(', ')
+  const images = Array.isArray(r.Media)
+    ? r.Media.filter(m => m?.MediaURL).slice(0, 8).map(m => m.MediaURL)
+    : []
+  const type = /commercial|office|retail|industrial|medical/i.test(`${r.PropertyType} ${r.PropertySubType}`) ? 'commercial' : 'residential'
+  return {
+    id: `mls_${r.ListingKey}`,
+    listingId: r.ListingId || r.ListingKey,
+    type,
+    title: r.PublicRemarks ? r.PublicRemarks.slice(0, 60) + (r.PublicRemarks.length > 60 ? '…' : '') : (street || 'Listing'),
+    address,
+    city: r.City || '',
+    state: r.StateOrProvince || '',
+    zip: r.PostalCode || '',
+    price: r.ListPrice || 0,
+    beds: r.BedroomsTotal || 0,
+    baths: r.BathroomsTotalInteger || 0,
+    sqft: r.LivingArea || 0,
+    yearBuilt: r.YearBuilt || null,
+    lotAcres: r.LotSizeAcres || null,
+    description: r.PublicRemarks || '',
+    images: images.length ? images : ['/placeholder-property.jpg'],
+    heroImage: images[0] || '/placeholder-property.jpg',
+    location: (r.Latitude && r.Longitude) ? { type: 'Point', coordinates: [r.Longitude, r.Latitude] } : null,
+    amenities: [],
+    virtualTour: r.VirtualTourURLUnbranded || null,
+    photosCount: r.PhotosCount || images.length,
+    agent: [r.ListAgentFirstName, r.ListAgentLastName].filter(Boolean).join(' ') || null,
+    office: r.ListOfficeName || null,
+    source: 'MLS',
+    modifiedAt: r.ModificationTimestamp || null
+  }
+}
+
+async function getLiveCatalog(db, prefs = {}) {
+  // Direct pass-through: fetch fresh from Spark on every call.
+  // NO Mongo persistence. NO DB sync. Live JSON straight to Hobson.
+  if (process.env.SPARK_API_TOKEN) {
+    try {
+      const live = await fetchLiveMLS({ prefs, limit: 200 })
+      if (live && live.length > 0) return live
+    } catch (e) {
+      console.error('[SparkAPI] Fetch error:', e.message)
+    }
+  }
+  // Fallback ONLY if Spark unreachable: local seed (hand-curated Anasa listings)
+  return await db.collection('properties').find({}).toArray()
+}
+
 // ============= LLM CALL =============
 async function callAtlas({ persona, messages, propertiesCatalog, knownPreferences, knownLead, knownBroker = null, fast = false }) {
   const personaCfg = PERSONAS[persona] || PERSONAS.residential
@@ -292,10 +391,10 @@ ${SCORING_RUBRIC}
 
 OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
 {
-  "reply": "<your conversational message — KEEP IT SHORT: 1-3 short sentences MAX. Hobson is concise, not chatty. No long paragraphs. Ever.>",
+  "reply": "<your conversational message — CRITICAL: 1-2 short sentences MAX. NEVER describe property details (no addresses, prices, sqft, features, or bullet-point lists). The right panel shows the cards visually. Just briefly acknowledge and let cards speak. Example: 'Three worth your time, right this way.' or 'A fine brief — take a look.'>",
   "lead": { "name": null|string, "email": null|string, "phone": null|string, "company": null|string },
   "preferences": { "location": null|string, "budget_min": null|number, "budget_max": null|number, "asset_type": null|string, "beds": null|number, "baths": null|number, "amenities": [], "timeline": null|string, "cap_rate_target": null|number, "zoning": null|string, "notes": null|string },
-  "recommended_ids": ["p1", ...],
+  "recommended_ids": ["p1" | "mls_12345", ...],
   "stage": "discovery" | "qualified" | "showing" | "negotiating" | "closed",
   "lead_score": 0-100,
   "lead_tier": "cold" | "warm" | "hot"
@@ -631,7 +730,67 @@ async function handleRoute(request, { params }) {
       session.messages.push({ role: 'user', content: message, ts: new Date().toISOString() })
       const recent = session.messages.slice(-30)
 
-      const propsCatalog = await db.collection('properties').find({}).toArray()
+      // Map Claude's preference keys (location/budget_min/budget_max) to
+      // Spark filter keys (city/budgetMin/budgetMax) so the live IDX feed
+      // actually filters on the user's real search criteria.
+      const rawPrefs = session.preferences || {}
+
+      // FIRST-TURN CITY EXTRACTION: on turn 1 the AI hasn't parsed preferences
+      // yet, so the initial Spark pull would be global (only ~6 Delray
+      // listings in the 200-cap). Scan the user's live message for known
+      // South Florida city names and inject BEFORE the Spark call so we pull
+      // city-specific inventory (up to 200 Delray, 200 Miami, etc.).
+      const SFL_CITIES = [
+        'Delray Beach','Boca Raton','Palm Beach','West Palm Beach','Palm Beach Gardens',
+        'Wellington','Jupiter','Manalapan','Lantana','Lake Worth','Highland Beach',
+        'Boynton Beach','Ocean Ridge','Hypoluxo','Gulf Stream','Loxahatchee','Tequesta',
+        'Miami','Miami Beach','Coral Gables','Coconut Grove','Key Biscayne','Pinecrest',
+        'Palmetto Bay','Bal Harbour','Bay Harbor Islands','Surfside','Sunny Isles Beach',
+        'Aventura','Golden Beach','North Miami','North Miami Beach','South Miami',
+        'Doral','Hialeah','Homestead','Cutler Bay','Miami Shores','Fisher Island',
+        'Fort Lauderdale','Hollywood','Hallandale Beach','Davie','Southwest Ranches',
+        'Weston','Plantation','Coral Springs','Parkland','Pompano Beach','Lighthouse Point',
+        'Deerfield Beach','Cooper City','Dania Beach','Sunrise','Tamarac','Wilton Manors',
+        'Naples','Marco Island','Bonita Springs','Estero','Sarasota','Longboat Key',
+        'Vero Beach','Stuart','Hobe Sound'
+      ]
+      const msgLc = ' ' + String(message || '').toLowerCase() + ' '
+      let extractedCity = null
+      // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
+      for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
+        if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
+            msgLc.includes(' ' + city.toLowerCase() + ',') ||
+            msgLc.includes(' ' + city.toLowerCase() + '.') ||
+            msgLc.includes(' ' + city.toLowerCase() + '?')) {
+          extractedCity = city
+          break
+        }
+      }
+      // Extract budget hints ($3M, $2-5M, $4 million, etc.)
+      let extractedBudgetMin = null, extractedBudgetMax = null
+      const rangeMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(?:m|million|mm)?\s*(?:-|to|and)\s*\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
+      if (rangeMatch) {
+        const mult = /k/i.test(rangeMatch[3]) ? 1000 : 1_000_000
+        extractedBudgetMin = Math.round(parseFloat(rangeMatch[1]) * mult)
+        extractedBudgetMax = Math.round(parseFloat(rangeMatch[2]) * mult)
+      } else {
+        const singleMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
+        if (singleMatch) {
+          const mult = /k/i.test(singleMatch[2]) ? 1000 : 1_000_000
+          const val = Math.round(parseFloat(singleMatch[1]) * mult)
+          extractedBudgetMin = Math.round(val * 0.75)
+          extractedBudgetMax = Math.round(val * 1.25)
+        }
+      }
+
+      const mappedPrefs = {
+        city: rawPrefs.city || rawPrefs.location || extractedCity || null,
+        budgetMin: rawPrefs.budgetMin ?? rawPrefs.budget_min ?? extractedBudgetMin ?? null,
+        budgetMax: rawPrefs.budgetMax ?? rawPrefs.budget_max ?? extractedBudgetMax ?? null,
+        beds: rawPrefs.beds ?? null,
+        baths: rawPrefs.baths ?? null
+      }
+      const propsCatalog = await getLiveCatalog(db, mappedPrefs)
       const brokerSettings = await db.collection('settings').findOne({ id: 'global' })
       const knownBroker = brokerSettings?.broker || null
 
