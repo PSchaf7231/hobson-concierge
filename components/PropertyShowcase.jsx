@@ -49,17 +49,6 @@ function PropertyCard({ p, index = 0 }) {
           style={{ filter: 'brightness(.92)' }}
           loading="lazy"
         />
-        {/* Status pill top-left */}
-        <span
-          className="absolute top-3.5 left-3.5 text-[#EDF1F7] text-[10px] uppercase font-medium px-3 py-1.5 rounded-full backdrop-blur-md"
-          style={{
-            letterSpacing: '0.22em',
-            background: 'rgba(11, 21, 38, 0.72)',
-            border: '1px solid rgba(255, 255, 255, 0.12)'
-          }}
-        >
-          {statusPill(p)}
-        </span>
       </div>
 
       {/* Gold hairline divider */}

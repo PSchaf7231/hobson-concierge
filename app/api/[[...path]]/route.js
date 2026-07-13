@@ -832,12 +832,11 @@ async function handleRoute(request, { params }) {
         beds: rawPrefs.beds ?? null,
         baths: rawPrefs.baths ?? null
       }
-      // LIVE IDX pass-through — no DB storage. Falls back to local seed only if
-      // Spark is disabled or the live query fails.
+      // LIVE IDX pass-through — no DB storage. NO seed fallback for user-facing
+      // queries: if Spark returns nothing, we honestly show nothing rather than
+      // silently substituting Anasa demo data (which may be out-of-region).
       let propsCatalog = await liveIdxSearch({ preferences: mappedPrefs })
-      if (!propsCatalog || propsCatalog.length === 0) {
-        propsCatalog = await db.collection('properties').find({}).toArray()
-      }
+      if (!propsCatalog) propsCatalog = []
       const brokerSettings = await db.collection('settings').findOne({ id: 'global' })
       const knownBroker = brokerSettings?.broker || null
 
