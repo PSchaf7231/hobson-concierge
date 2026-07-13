@@ -932,9 +932,16 @@ async function handleRoute(request, { params }) {
         console.error('BoldTrail auto-push failed:', pushErr.message)
       }
 
-      const recommendedProperties = propsCatalog
-        .filter(p => recIds.includes(p.id))
-        .map(({ _id, ...rest }) => rest)
+      // Return the FULL matched inventory to the frontend, not just Claude's picks.
+      // Real-estate expectation: user sees ALL matches (can be 50, 100, 200+) and
+      // scrolls / narrows via follow-up queries. Claude's `recIds` become the
+      // highlighted "featured" picks, but every match is shown.
+      const recommendedProperties = session.persona === 'commercial'
+        ? []
+        : propsCatalog.map(({ _id, ...rest }) => ({
+            ...rest,
+            featured: recIds.includes(rest.id)
+          }))
       const favoriteProperties = propsCatalog
         .filter(p => (session.favorite_ids || []).includes(p.id))
         .map(({ _id, ...rest }) => rest)
