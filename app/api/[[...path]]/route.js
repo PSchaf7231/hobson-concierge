@@ -784,15 +784,28 @@ async function handleRoute(request, { params }) {
         'Vero Beach','Stuart','Hobe Sound'
       ]
       const msgLc = ' ' + String(message || '').toLowerCase() + ' '
-      let extractedCity = null
-      // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
-      for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
-        if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
-            msgLc.includes(' ' + city.toLowerCase() + ',') ||
-            msgLc.includes(' ' + city.toLowerCase() + '.') ||
-            msgLc.includes(' ' + city.toLowerCase() + '?')) {
-          extractedCity = city
+      // COUNTY FIRST: if user says "Palm Beach County", "Miami-Dade County",
+      // "Broward County", etc., treat as county filter — pulls the ENTIRE
+      // county's inventory, not just one city. County wins over city match.
+      const COUNTIES = ['Palm Beach', 'Miami-Dade', 'Broward', 'Martin', 'St. Lucie', 'Indian River', 'Collier', 'Lee', 'Monroe']
+      let extractedCounty = null
+      for (const county of COUNTIES) {
+        if (msgLc.includes(' ' + county.toLowerCase() + ' county')) {
+          extractedCounty = county
           break
+        }
+      }
+      let extractedCity = null
+      if (!extractedCounty) {
+        // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
+        for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
+          if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
+              msgLc.includes(' ' + city.toLowerCase() + ',') ||
+              msgLc.includes(' ' + city.toLowerCase() + '.') ||
+              msgLc.includes(' ' + city.toLowerCase() + '?')) {
+            extractedCity = city
+            break
+          }
         }
       }
       // Extract budget hints ($3M, $2-5M, $4 million, etc.)

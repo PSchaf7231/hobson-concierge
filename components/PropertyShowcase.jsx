@@ -213,15 +213,15 @@ export default function PropertyShowcase({ properties = [] }) {
       {hasProps && (
         <div className="relative pb-8">
           <div
-            className="mx-auto overflow-y-auto scroll-smooth px-2"
+            className="mx-auto overflow-y-auto scroll-smooth px-2 hobson-scroll"
             style={{
-              width: '92%',
-              maxWidth: '920px',
-              maxHeight: '640px',
+              width: '98%',
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 200px)',
               scrollbarWidth: 'thin'
             }}
           >
-            <div className="grid grid-cols-2 gap-6 pt-2">
+            <div className="grid grid-cols-3 gap-4 pt-2">
               {properties.map((p, i) => (
                 <PropertyCard key={p.id || p.listingId || i} p={p} index={i} />
               ))}
