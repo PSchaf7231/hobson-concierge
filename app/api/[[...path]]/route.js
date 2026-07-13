@@ -430,7 +430,7 @@ OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
   "lead_score": 0-100,
   "lead_tier": "cold" | "warm" | "hot"
 }
-Merge new info with KNOWN values — preserve previously captured fields if user hasn't changed them. recommended_ids must be a subset of catalog ids. Only fill recommendations when you have enough criteria; otherwise empty array.`
+Merge new info with KNOWN values — preserve previously captured fields if user hasn't changed them. recommended_ids must be a subset of catalog ids. ALWAYS return 3-6 recommendations from the catalog when the user has expressed even ONE criterion (a city, a budget hint, a lifestyle cue, or a request to "see" / "show" / "browse" listings). For broad queries like "show me everything in Palm Beach County" — pick 3-6 DIVERSE samples that span the price range and neighborhoods. Only return an empty array when the user has said nothing that hints at property interest (e.g. pure greetings, unrelated questions, or when the catalog is genuinely empty).`
 
   const apiMessages = [
     { role: 'system', content: sysPrompt },
@@ -851,9 +851,31 @@ async function handleRoute(request, { params }) {
       session.preferences = mergeObj(session.preferences, parsed.preferences)
       const validIds = new Set(propsCatalog.map(p => p.id))
       // 🛡️ Commercial side NEVER shows listings — strip any property recs regardless of what the LLM returned
-      const recIds = session.persona === 'commercial'
+      let recIds = session.persona === 'commercial'
         ? []
         : (parsed.recommended_ids || []).filter(id => validIds.has(id))
+
+      // 🎯 FALLBACK: if Claude returned zero recs but the catalog has listings AND the user
+      // expressed even minimal property interest ("show", "see", "browse", city name, budget),
+      // auto-pick 6 diverse listings spread across the price range so the right panel never
+      // sits empty when live inventory exists.
+      if (recIds.length === 0 && session.persona !== 'commercial' && propsCatalog.length > 0) {
+        const msgLower = String(message || '').toLowerCase()
+        const propertyIntent = /show|see|browse|look|find|any|price|home|house|condo|estate|villa|penthouse|apartment|property|listing|palm|miami|delray|boca|hollywood|beach|county|market|inventory|\$|million|budget|bed|bath/i.test(msgLower)
+        if (propertyIntent) {
+          const sorted = [...propsCatalog].sort((a, b) => (a.price || 0) - (b.price || 0))
+          const n = sorted.length
+          // Pick 6 evenly-spaced samples across the price distribution
+          const pickCount = Math.min(6, n)
+          const step = n / pickCount
+          const picked = []
+          for (let i = 0; i < pickCount; i++) {
+            const idx = Math.min(n - 1, Math.floor(i * step + step / 2))
+            if (sorted[idx] && !picked.find(p => p.id === sorted[idx].id)) picked.push(sorted[idx])
+          }
+          recIds = picked.map(p => p.id)
+        }
+      }
       session.recommended_ids = recIds
       session.stage = parsed.stage || session.stage
       if (typeof parsed.lead_score === 'number') session.lead_score = Math.max(0, Math.min(100, Math.round(parsed.lead_score)))
