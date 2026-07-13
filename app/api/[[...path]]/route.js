@@ -825,10 +825,13 @@ async function handleRoute(request, { params }) {
         }
       }
 
+      // Current-message extraction OVERRIDES stale session prefs — so if the
+      // user types "Palm Beach County" now, we don't get stuck on last turn's
+      // "Palm Beach" city. County wins over city, current message wins over cache.
       const mappedPrefs = {
-        location: rawPrefs.location || rawPrefs.city || extractedCity || null,
-        budget_min: rawPrefs.budget_min ?? rawPrefs.budgetMin ?? extractedBudgetMin ?? null,
-        budget_max: rawPrefs.budget_max ?? rawPrefs.budgetMax ?? extractedBudgetMax ?? null,
+        location: extractedCounty ? `${extractedCounty} County` : (extractedCity || rawPrefs.location || rawPrefs.city || null),
+        budget_min: extractedBudgetMin ?? rawPrefs.budget_min ?? rawPrefs.budgetMin ?? null,
+        budget_max: extractedBudgetMax ?? rawPrefs.budget_max ?? rawPrefs.budgetMax ?? null,
         beds: rawPrefs.beds ?? null,
         baths: rawPrefs.baths ?? null
       }
