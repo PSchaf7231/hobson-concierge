@@ -244,6 +244,50 @@ function InlineLeadCapture() {
   )
 }
 
+// ==========================================================================
+// Compact custom dropdown — inline scrollable options, stays within panel.
+// Native <select> popups escape the panel and can render off-screen.
+// This version keeps everything inside the overlay's bounds.
+// ==========================================================================
+function CompactSelect({ value, onChange, options, placeholder = 'Any', className = '' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+  const selected = options.find(o => o.value === value)
+  const label = selected ? selected.label : placeholder
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5 text-left flex items-center justify-between transition"
+      >
+        <span className={value ? '' : 'text-[#F5EDE0]/50'}>{label}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 max-h-36 overflow-y-auto rounded border border-[#D4AF37]/50 bg-[#0A1628] z-50 shadow-2xl hobson-scroll">
+          {options.map(o => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => { onChange(o.value); setOpen(false) }}
+              className={`block w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-[#D4AF37]/25 transition ${o.value === value ? 'bg-[#D4AF37]/30 text-[#F5EDE0]' : 'text-[#F5EDE0]/85'}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // =====================================================================
 // CHAT PANEL (left half of concierge)
 // =====================================================================
@@ -448,36 +492,68 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
 
   // Search Criteria plate — collapsible filter panel between video and chat box
   const [searchOpen, setSearchOpen] = useState(false)
+  const [moreFilters, setMoreFilters] = useState(false)
   const [filters, setFilters] = useState({
-    city: '', priceMin: '', priceMax: '',
-    bedsMin: '', bathsMin: '', sqftMin: '', sqftMax: '',
-    propertyType: '', pool: false, gated: false, waterfront: false
+    location: '',
+    propertyType: '',
+    priceMin: '',
+    priceMax: '',
+    beds: '',
+    baths: '',
+    status: 'Active',
+    sqftMin: '',
+    yearBuiltMin: '',
+    garage: '',
+    pool: '',
+    waterfront: '',
+    hoaMax: '',
+    view: ''
   })
   function runSearch() {
+    const f = filters
     const parts = []
-    if (filters.city) parts.push(`in ${filters.city}`)
-    if (filters.priceMin || filters.priceMax) {
-      const min = filters.priceMin ? `$${Number(filters.priceMin).toLocaleString()}` : '$0'
-      const max = filters.priceMax ? `$${Number(filters.priceMax).toLocaleString()}` : 'any'
-      parts.push(`priced ${min} to ${max}`)
+    if (f.location) parts.push(`in ${f.location}`)
+    if (f.propertyType) parts.push(f.propertyType.toLowerCase())
+    if (f.priceMin || f.priceMax) {
+      const mn = f.priceMin ? `$${Number(f.priceMin).toLocaleString()}` : '$0'
+      const mx = f.priceMax ? `$${Number(f.priceMax).toLocaleString()}` : 'no cap'
+      parts.push(`priced ${mn} to ${mx}`)
     }
-    if (filters.bedsMin) parts.push(`${filters.bedsMin}+ beds`)
-    if (filters.bathsMin) parts.push(`${filters.bathsMin}+ baths`)
-    if (filters.sqftMin || filters.sqftMax) {
-      const s1 = filters.sqftMin || '0'
-      const s2 = filters.sqftMax || 'any'
-      parts.push(`${s1}-${s2} sqft`)
-    }
-    if (filters.propertyType) parts.push(`${filters.propertyType}`)
-    if (filters.pool) parts.push('with a private pool')
-    if (filters.gated) parts.push('in a gated community')
-    if (filters.waterfront) parts.push('waterfront')
-    const q = parts.length
-      ? `Show me properties ${parts.join(', ')}.`
-      : 'Show me the full Palm Beach County inventory, any price.'
+    if (f.beds && f.beds !== 'Any') parts.push(`${f.beds} beds`)
+    if (f.baths && f.baths !== 'Any') parts.push(`${f.baths} baths`)
+    if (f.sqftMin) parts.push(`min ${f.sqftMin} sqft`)
+    if (f.yearBuiltMin) parts.push(`built ${f.yearBuiltMin}`)
+    if (f.garage) parts.push(`${f.garage} garage`)
+    if (f.pool && f.pool !== 'Any') parts.push(f.pool === 'Yes' ? 'with a private pool' : 'no pool')
+    if (f.waterfront === 'Yes') parts.push('waterfront')
+    if (f.hoaMax) parts.push(`HOA under ${f.hoaMax}`)
+    if (f.view) parts.push(`${f.view.toLowerCase()}`)
+    if (f.status && f.status !== 'Active') parts.push(`status ${f.status.toLowerCase()}`)
+    const q = parts.length ? `Show me properties ${parts.join(', ')}.` : 'Show me the full Palm Beach County inventory, any price.'
     setSearchOpen(false)
+    setMoreFilters(false)
     send(q)
   }
+  // Option lists
+  const PRICE_OPTS = [
+    { value: '', label: 'Any' },
+    { value: '100000', label: '$100k' }, { value: '200000', label: '$200k' }, { value: '300000', label: '$300k' },
+    { value: '400000', label: '$400k' }, { value: '500000', label: '$500k' }, { value: '600000', label: '$600k' },
+    { value: '750000', label: '$750k' }, { value: '1000000', label: '$1M' }, { value: '1500000', label: '$1.5M' },
+    { value: '2000000', label: '$2M' }, { value: '3000000', label: '$3M' }, { value: '5000000', label: '$5M' },
+    { value: '7500000', label: '$7.5M' }, { value: '10000000', label: '$10M' }, { value: '20000000', label: '$20M+' }
+  ]
+  const BED_OPTS = [{value:'',label:'Any'},{value:'1+',label:'1+'},{value:'2+',label:'2+'},{value:'3+',label:'3+'},{value:'4+',label:'4+'},{value:'5+',label:'5+'},{value:'6+',label:'6+'}]
+  const BATH_OPTS = [{value:'',label:'Any'},{value:'1+',label:'1+'},{value:'1.5+',label:'1.5+'},{value:'2+',label:'2+'},{value:'3+',label:'3+'},{value:'4+',label:'4+'},{value:'5+',label:'5+'}]
+  const PROPTYPE_OPTS = [{value:'',label:'Any'},{value:'Single Family',label:'Single Family'},{value:'Condo',label:'Condo'},{value:'Townhouse',label:'Townhouse'},{value:'Multi-Family',label:'Multi-Family'},{value:'Land',label:'Land'}]
+  const STATUS_OPTS = [{value:'Active',label:'Active'},{value:'Pending',label:'Pending'},{value:'Sold',label:'Sold'}]
+  const SQFT_OPTS = [{value:'',label:'Any'},{value:'1000',label:'1k+'},{value:'1500',label:'1.5k+'},{value:'2000',label:'2k+'},{value:'2500',label:'2.5k+'},{value:'3000',label:'3k+'},{value:'4000',label:'4k+'},{value:'5000',label:'5k+'}]
+  const YEAR_OPTS = [{value:'',label:'Any'},{value:'2020+',label:'2020+'},{value:'2010+',label:'2010+'},{value:'2000+',label:'2000+'},{value:'1990+',label:'1990+'},{value:'1980+',label:'1980+'}]
+  const GARAGE_OPTS = [{value:'',label:'Any'},{value:'1+',label:'1+'},{value:'2+',label:'2+'},{value:'3+',label:'3+'},{value:'4+',label:'4+'}]
+  const POOL_OPTS = [{value:'',label:'Any'},{value:'Yes',label:'Yes (Private)'},{value:'No',label:'No'}]
+  const WATER_OPTS = [{value:'',label:'Any'},{value:'Yes',label:'Yes'},{value:'No',label:'No'}]
+  const HOA_OPTS = [{value:'',label:'Any'},{value:'$100/mo',label:'$100/mo'},{value:'$200/mo',label:'$200/mo'},{value:'$500/mo',label:'$500/mo'},{value:'$1000/mo',label:'$1k/mo'}]
+  const VIEW_OPTS = [{value:'',label:'Any'},{value:'Ocean View',label:'Ocean View'},{value:'Canal/Water View',label:'Canal/Water View'},{value:'Golf Course View',label:'Golf Course View'},{value:'Garden View',label:'Garden View'}]
 
   const suggestions = persona === 'residential'
     ? ['Waterfront estate in Boca, $4–6M', 'New construction, Delray Beach', 'Golf course view, Wellington']
@@ -565,90 +641,110 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: searchOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="m6 9 6 6 6-6"/></svg>
         </button>
         {searchOpen && (
-          <div className="absolute top-full left-6 right-6 mt-2 rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-5 z-40 max-h-[42vh] overflow-y-auto hobson-scroll"
+          <div className="absolute top-full left-6 right-6 mt-2 rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-4 z-40 max-h-[52vh] overflow-y-auto hobson-scroll"
                style={{ background: 'linear-gradient(to bottom, rgba(10,22,40,0.98), rgba(11,21,38,0.98))' }}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold">Refine Search</div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold">Primary Filters</div>
               <button onClick={() => setSearchOpen(false)} className="text-[#F5EDE0]/50 hover:text-[#F5EDE0] text-xs">✕</button>
             </div>
-            {/* Filter grid — 2 columns, 8+ fields */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+
+            {/* PRIMARY ROW — 6 fields + More Filters + Search */}
+            <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr] gap-2">
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">City / County</label>
-                <input value={filters.city} onChange={e => setFilters(f => ({...f, city: e.target.value}))} placeholder="e.g. Delray Beach, Palm Beach County" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Location</label>
+                <input value={filters.location} onChange={e => setFilters(f => ({...f, location: e.target.value}))} placeholder="City, Zip, or Neighborhood" className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5" />
               </div>
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Property Type</label>
-                <select value={filters.propertyType} onChange={e => setFilters(f => ({...f, propertyType: e.target.value}))} className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2">
-                  <option value="">Any</option>
-                  <option value="single-family home">Single Family</option>
-                  <option value="condo">Condo</option>
-                  <option value="townhouse">Townhouse</option>
-                  <option value="land">Land</option>
-                </select>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Property Type</label>
+                <CompactSelect value={filters.propertyType} onChange={v => setFilters(f => ({...f, propertyType: v}))} options={PROPTYPE_OPTS} />
               </div>
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Price Min</label>
-                <input type="number" value={filters.priceMin} onChange={e => setFilters(f => ({...f, priceMin: e.target.value}))} placeholder="400000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Min Price</label>
+                <CompactSelect value={filters.priceMin} onChange={v => setFilters(f => ({...f, priceMin: v}))} options={PRICE_OPTS} />
               </div>
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Price Max</label>
-                <input type="number" value={filters.priceMax} onChange={e => setFilters(f => ({...f, priceMax: e.target.value}))} placeholder="10000000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Max Price</label>
+                <CompactSelect value={filters.priceMax} onChange={v => setFilters(f => ({...f, priceMax: v}))} options={PRICE_OPTS} />
               </div>
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Beds (min)</label>
-                <input type="number" value={filters.bedsMin} onChange={e => setFilters(f => ({...f, bedsMin: e.target.value}))} placeholder="3" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Bedrooms</label>
+                <CompactSelect value={filters.beds} onChange={v => setFilters(f => ({...f, beds: v}))} options={BED_OPTS} />
               </div>
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Baths (min)</label>
-                <input type="number" value={filters.bathsMin} onChange={e => setFilters(f => ({...f, bathsMin: e.target.value}))} placeholder="3" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
-              </div>
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Sqft Min</label>
-                <input type="number" value={filters.sqftMin} onChange={e => setFilters(f => ({...f, sqftMin: e.target.value}))} placeholder="2000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
-              </div>
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Sqft Max</label>
-                <input type="number" value={filters.sqftMax} onChange={e => setFilters(f => ({...f, sqftMax: e.target.value}))} placeholder="8000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Bathrooms</label>
+                <CompactSelect value={filters.baths} onChange={v => setFilters(f => ({...f, baths: v}))} options={BATH_OPTS} />
               </div>
             </div>
-            {/* Amenity toggles */}
-            <div className="flex items-center gap-5 mt-4 pt-3 border-t border-[#D4AF37]/15">
-              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[#F5EDE0]/85">
-                <input type="checkbox" checked={filters.pool} onChange={e => setFilters(f => ({...f, pool: e.target.checked}))} className="h-3.5 w-3.5 accent-[#D4AF37]" />
-                Private Pool
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[#F5EDE0]/85">
-                <input type="checkbox" checked={filters.gated} onChange={e => setFilters(f => ({...f, gated: e.target.checked}))} className="h-3.5 w-3.5 accent-[#D4AF37]" />
-                Gated Community
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[#F5EDE0]/85">
-                <input type="checkbox" checked={filters.waterfront} onChange={e => setFilters(f => ({...f, waterfront: e.target.checked}))} className="h-3.5 w-3.5 accent-[#D4AF37]" />
-                Waterfront
-              </label>
-            </div>
-            {/* Actions */}
-            <div className="flex items-center justify-between mt-5">
+
+            {/* More Filters toggle + Search actions */}
+            <div className="flex items-center justify-between mt-4">
               <button
                 type="button"
-                onClick={() => setFilters({ city: '', priceMin: '', priceMax: '', bedsMin: '', bathsMin: '', sqftMin: '', sqftMax: '', propertyType: '', pool: false, gated: false, waterfront: false })}
-                className="text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+                onClick={() => setMoreFilters(v => !v)}
+                className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37] hover:text-[#E6C878] transition"
               >
-                Clear
+                {moreFilters ? '− Fewer Filters' : '+ More Filters'}
               </button>
-              <button
-                type="button"
-                onClick={runSearch}
-                className="px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
-                style={{
-                  background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)',
-                  border: '1px solid #8a6b2a'
-                }}
-              >
-                Search
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFilters({ location:'', propertyType:'', priceMin:'', priceMax:'', beds:'', baths:'', status:'Active', sqftMin:'', yearBuiltMin:'', garage:'', pool:'', waterfront:'', hoaMax:'', view:'' })}
+                  className="text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={runSearch}
+                  className="px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
+                  style={{ background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)', border: '1px solid #8a6b2a' }}
+                >
+                  Search
+                </button>
+              </div>
             </div>
+
+            {/* SECONDARY TRAY — appears only when More Filters is clicked */}
+            {moreFilters && (
+              <div className="mt-4 pt-4 border-t border-[#D4AF37]/20">
+                <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold mb-3">More Filters</div>
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Property Status</label>
+                    <CompactSelect value={filters.status} onChange={v => setFilters(f => ({...f, status: v}))} options={STATUS_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Sqft (min)</label>
+                    <CompactSelect value={filters.sqftMin} onChange={v => setFilters(f => ({...f, sqftMin: v}))} options={SQFT_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Year Built (min)</label>
+                    <CompactSelect value={filters.yearBuiltMin} onChange={v => setFilters(f => ({...f, yearBuiltMin: v}))} options={YEAR_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Garage Spaces</label>
+                    <CompactSelect value={filters.garage} onChange={v => setFilters(f => ({...f, garage: v}))} options={GARAGE_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Pool</label>
+                    <CompactSelect value={filters.pool} onChange={v => setFilters(f => ({...f, pool: v}))} options={POOL_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Waterfront</label>
+                    <CompactSelect value={filters.waterfront} onChange={v => setFilters(f => ({...f, waterfront: v}))} options={WATER_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">HOA Fees (max)</label>
+                    <CompactSelect value={filters.hoaMax} onChange={v => setFilters(f => ({...f, hoaMax: v}))} options={HOA_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">View</label>
+                    <CompactSelect value={filters.view} onChange={v => setFilters(f => ({...f, view: v}))} options={VIEW_OPTS} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
