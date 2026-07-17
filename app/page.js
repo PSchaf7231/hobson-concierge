@@ -446,6 +446,39 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
     onProperties && onProperties([])
   }
 
+  // Search Criteria plate — collapsible filter panel between video and chat box
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [filters, setFilters] = useState({
+    city: '', priceMin: '', priceMax: '',
+    bedsMin: '', bathsMin: '', sqftMin: '', sqftMax: '',
+    propertyType: '', pool: false, gated: false, waterfront: false
+  })
+  function runSearch() {
+    const parts = []
+    if (filters.city) parts.push(`in ${filters.city}`)
+    if (filters.priceMin || filters.priceMax) {
+      const min = filters.priceMin ? `$${Number(filters.priceMin).toLocaleString()}` : '$0'
+      const max = filters.priceMax ? `$${Number(filters.priceMax).toLocaleString()}` : 'any'
+      parts.push(`priced ${min} to ${max}`)
+    }
+    if (filters.bedsMin) parts.push(`${filters.bedsMin}+ beds`)
+    if (filters.bathsMin) parts.push(`${filters.bathsMin}+ baths`)
+    if (filters.sqftMin || filters.sqftMax) {
+      const s1 = filters.sqftMin || '0'
+      const s2 = filters.sqftMax || 'any'
+      parts.push(`${s1}-${s2} sqft`)
+    }
+    if (filters.propertyType) parts.push(`${filters.propertyType}`)
+    if (filters.pool) parts.push('with a private pool')
+    if (filters.gated) parts.push('in a gated community')
+    if (filters.waterfront) parts.push('waterfront')
+    const q = parts.length
+      ? `Show me properties ${parts.join(', ')}.`
+      : 'Show me the full Palm Beach County inventory, any price.'
+    setSearchOpen(false)
+    send(q)
+  }
+
   const suggestions = persona === 'residential'
     ? ['Waterfront estate in Boca, $4–6M', 'New construction, Delray Beach', 'Golf course view, Wellington']
     : ['Stabilized MOB near hospital, 7%+ cap', 'Class A office, Palm Beach County', 'ASC with NNN lease, 8%+ cap']
@@ -512,6 +545,112 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
           </div>
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
         </div>
+      </div>
+
+      {/* Search Criteria — gold pill + overlay filter panel (does NOT push chat down) */}
+      <div className="relative flex-shrink-0 px-6 pb-1 flex justify-center z-30">
+        <button
+          type="button"
+          onClick={() => setSearchOpen(v => !v)}
+          className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full text-[10px] uppercase tracking-[0.32em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
+          style={{
+            background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)',
+            border: '1px solid #8a6b2a',
+            boxShadow: '0 2px 8px rgba(201, 162, 39, 0.35), inset 0 1px 0 rgba(255,255,255,0.35)'
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          Search Criteria
+          {recommended.length > 0 && <span className="text-[9px] normal-case tracking-normal opacity-80">· {recommended.length} shown</span>}
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: searchOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        {searchOpen && (
+          <div className="absolute top-full left-6 right-6 mt-2 rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-5 z-40"
+               style={{ background: 'linear-gradient(to bottom, rgba(10,22,40,0.98), rgba(11,21,38,0.98))' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold">Refine Search</div>
+              <button onClick={() => setSearchOpen(false)} className="text-[#F5EDE0]/50 hover:text-[#F5EDE0] text-xs">✕</button>
+            </div>
+            {/* Filter grid — 2 columns, 8+ fields */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">City / County</label>
+                <input value={filters.city} onChange={e => setFilters(f => ({...f, city: e.target.value}))} placeholder="e.g. Delray Beach, Palm Beach County" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Property Type</label>
+                <select value={filters.propertyType} onChange={e => setFilters(f => ({...f, propertyType: e.target.value}))} className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2">
+                  <option value="">Any</option>
+                  <option value="single-family home">Single Family</option>
+                  <option value="condo">Condo</option>
+                  <option value="townhouse">Townhouse</option>
+                  <option value="land">Land</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Price Min</label>
+                <input type="number" value={filters.priceMin} onChange={e => setFilters(f => ({...f, priceMin: e.target.value}))} placeholder="400000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Price Max</label>
+                <input type="number" value={filters.priceMax} onChange={e => setFilters(f => ({...f, priceMax: e.target.value}))} placeholder="10000000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Beds (min)</label>
+                <input type="number" value={filters.bedsMin} onChange={e => setFilters(f => ({...f, bedsMin: e.target.value}))} placeholder="3" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Baths (min)</label>
+                <input type="number" value={filters.bathsMin} onChange={e => setFilters(f => ({...f, bathsMin: e.target.value}))} placeholder="3" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Sqft Min</label>
+                <input type="number" value={filters.sqftMin} onChange={e => setFilters(f => ({...f, sqftMin: e.target.value}))} placeholder="2000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70">Sqft Max</label>
+                <input type="number" value={filters.sqftMax} onChange={e => setFilters(f => ({...f, sqftMax: e.target.value}))} placeholder="8000" className="mt-1 w-full h-9 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-xs px-2.5" />
+              </div>
+            </div>
+            {/* Amenity toggles */}
+            <div className="flex items-center gap-5 mt-4 pt-3 border-t border-[#D4AF37]/15">
+              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[#F5EDE0]/85">
+                <input type="checkbox" checked={filters.pool} onChange={e => setFilters(f => ({...f, pool: e.target.checked}))} className="h-3.5 w-3.5 accent-[#D4AF37]" />
+                Private Pool
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[#F5EDE0]/85">
+                <input type="checkbox" checked={filters.gated} onChange={e => setFilters(f => ({...f, gated: e.target.checked}))} className="h-3.5 w-3.5 accent-[#D4AF37]" />
+                Gated Community
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[#F5EDE0]/85">
+                <input type="checkbox" checked={filters.waterfront} onChange={e => setFilters(f => ({...f, waterfront: e.target.checked}))} className="h-3.5 w-3.5 accent-[#D4AF37]" />
+                Waterfront
+              </label>
+            </div>
+            {/* Actions */}
+            <div className="flex items-center justify-between mt-5">
+              <button
+                type="button"
+                onClick={() => setFilters({ city: '', priceMin: '', priceMax: '', bedsMin: '', bathsMin: '', sqftMin: '', sqftMax: '', propertyType: '', pool: false, gated: false, waterfront: false })}
+                className="text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={runSearch}
+                className="px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)',
+                  border: '1px solid #8a6b2a'
+                }}
+              >
+                Search
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Middle + Bottom UNIFIED: one chat box containing scrollable history AND input.
