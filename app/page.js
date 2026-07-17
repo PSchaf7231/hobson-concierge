@@ -565,7 +565,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: searchOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="m6 9 6 6 6-6"/></svg>
         </button>
         {searchOpen && (
-          <div className="absolute top-full left-6 right-6 mt-2 rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-5 z-40 max-h-[calc(100vh-260px)] overflow-y-auto hobson-scroll"
+          <div className="absolute top-full left-6 right-6 mt-2 rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-5 z-40 max-h-[42vh] overflow-y-auto hobson-scroll"
                style={{ background: 'linear-gradient(to bottom, rgba(10,22,40,0.98), rgba(11,21,38,0.98))' }}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
