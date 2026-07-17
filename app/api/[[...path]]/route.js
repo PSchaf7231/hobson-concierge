@@ -795,26 +795,57 @@ async function handleRoute(request, { params }) {
           break
         }
       }
+      // City shorthand map — check these BEFORE the full-name loop so "Boca"
+      // resolves to "Boca Raton" instead of falling through to county default.
+      const CITY_SHORTHANDS = {
+        'boca': 'Boca Raton',
+        'delray': 'Delray Beach',
+        'wpb': 'West Palm Beach',
+        'pbg': 'Palm Beach Gardens',
+        'ftl': 'Fort Lauderdale',
+        'fll': 'Fort Lauderdale',
+        'sib': 'Sunny Isles Beach'
+      }
       let extractedCity = null
       if (!extractedCounty) {
-        // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
-        for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
-          if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
-              msgLc.includes(' ' + city.toLowerCase() + ',') ||
-              msgLc.includes(' ' + city.toLowerCase() + '.') ||
-              msgLc.includes(' ' + city.toLowerCase() + '?')) {
-            extractedCity = city
+        for (const [short, full] of Object.entries(CITY_SHORTHANDS)) {
+          if (new RegExp(`\\b${short}\\b`, 'i').test(String(message || ''))) {
+            extractedCity = full
             break
           }
         }
+        if (!extractedCity) {
+          // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
+          for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
+            if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
+                msgLc.includes(' ' + city.toLowerCase() + ',') ||
+                msgLc.includes(' ' + city.toLowerCase() + '.') ||
+                msgLc.includes(' ' + city.toLowerCase() + '?')) {
+              extractedCity = city
+              break
+            }
+          }
+        }
       }
-      // Extract budget hints ($3M, $2-5M, $4 million, etc.)
+      // Extract budget hints ($3M, $2-5M, $4 million, $3M+, over $500K, etc.)
       let extractedBudgetMin = null, extractedBudgetMax = null
+      // "$X+", "$X and up", "$X or more", "over $X", "above $X" → minimum only, no cap
+      const openMatch = message && message.match(/(?:over|above|from|starting at|at least|min(?:imum)?)\s+\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)|\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)\s*(?:\+|and up|or more|plus)/i)
       const rangeMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(?:m|million|mm)?\s*(?:-|to|and)\s*\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
-      if (rangeMatch) {
+      const underMatch = message && message.match(/(?:under|below|max(?:imum)?|up to)\s+\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
+      if (openMatch) {
+        const num = openMatch[1] || openMatch[3]
+        const unit = openMatch[2] || openMatch[4]
+        const mult = /k/i.test(unit) ? 1000 : 1_000_000
+        extractedBudgetMin = Math.round(parseFloat(num) * mult)
+        extractedBudgetMax = null
+      } else if (rangeMatch) {
         const mult = /k/i.test(rangeMatch[3]) ? 1000 : 1_000_000
         extractedBudgetMin = Math.round(parseFloat(rangeMatch[1]) * mult)
         extractedBudgetMax = Math.round(parseFloat(rangeMatch[2]) * mult)
+      } else if (underMatch) {
+        const mult = /k/i.test(underMatch[2]) ? 1000 : 1_000_000
+        extractedBudgetMax = Math.round(parseFloat(underMatch[1]) * mult)
       } else {
         const singleMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
         if (singleMatch) {
@@ -825,38 +856,67 @@ async function handleRoute(request, { params }) {
         }
       }
 
+      // Bedroom extraction: "3 bed", "3 bedroom", "3bd", "3br", "3+ beds"
+      let extractedBeds = null
+      const bedMatch = message && message.match(/(\d+)\s*(?:\+\s*)?(?:bed(?:room)?s?|bd|br)\b/i)
+      if (bedMatch) extractedBeds = parseInt(bedMatch[1], 10)
+
       // Current-message extraction OVERRIDES stale session prefs — so if the
       // user types "Palm Beach County" now, we don't get stuck on last turn's
       // "Palm Beach" city. County wins over city, current message wins over cache.
       const mappedPrefs = {
         location: extractedCounty ? `${extractedCounty} County` : (extractedCity || rawPrefs.location || rawPrefs.city || null),
         budget_min: extractedBudgetMin ?? rawPrefs.budget_min ?? rawPrefs.budgetMin ?? null,
-        budget_max: extractedBudgetMax ?? rawPrefs.budget_max ?? rawPrefs.budgetMax ?? null,
-        beds: rawPrefs.beds ?? null,
+        budget_max: extractedBudgetMax !== undefined ? extractedBudgetMax : (rawPrefs.budget_max ?? rawPrefs.budgetMax ?? null),
+        beds: extractedBeds ?? rawPrefs.beds ?? null,
         baths: rawPrefs.baths ?? null
       }
       // LIVE IDX pass-through — no DB storage. NO seed fallback for user-facing
-      // queries: if Spark returns nothing, we honestly show nothing rather than
-      // silently substituting Anasa demo data (which may be out-of-region).
-      let propsCatalog = await liveIdxSearch({ preferences: mappedPrefs })
-      if (!propsCatalog) propsCatalog = []
+      // queries. Feed status feeds into the LLM prompt so it never invents.
+      const liveResult = await liveIdxSearch({ preferences: mappedPrefs })
+      // Distinguish 3 outcomes:
+      //   null      → feed unreachable (Spark 500/429/timeout)
+      //   []        → feed OK, zero matches
+      //   [items…]  → results
+      let feedStatus = 'OK'
+      let propsCatalog = []
+      if (liveResult === null) feedStatus = 'FEED_UNAVAILABLE'
+      else if (liveResult.length === 0) feedStatus = 'ZERO_MATCHES'
+      else propsCatalog = liveResult
       const brokerSettings = await db.collection('settings').findOne({ id: 'global' })
       const knownBroker = brokerSettings?.broker || null
 
       let parsed
-      try {
-        parsed = await callAtlas({
-          persona: session.persona,
-          messages: recent,
-          propertiesCatalog: propsCatalog,
-          knownPreferences: session.preferences,
-          knownLead: session.lead,
-          knownBroker,
-          fast
-        })
-      } catch (e) {
-        console.error('Atlas error:', e)
-        return handleCORS(NextResponse.json({ error: 'AI error: ' + e.message }, { status: 500 }))
+      // Short-circuit: when the live feed is unavailable or empty, DO NOT call the LLM
+      // (prevents Claude from inventing "curated" properties or roleplaying about a
+      // "thin catalog"). Return the mandated response text verbatim.
+      if (feedStatus === 'FEED_UNAVAILABLE') {
+        parsed = {
+          reply: 'The live property feed is temporarily unavailable, please try again in a few minutes.',
+          recommended_ids: [],
+          lead: null, preferences: null, lead_tier: session.lead_tier, lead_score: session.lead_score, stage: session.stage
+        }
+      } else if (feedStatus === 'ZERO_MATCHES') {
+        parsed = {
+          reply: 'I searched the live MLS and did not find any listings matching those criteria. Try broadening the price range or the location.',
+          recommended_ids: [],
+          lead: null, preferences: null, lead_tier: session.lead_tier, lead_score: session.lead_score, stage: session.stage
+        }
+      } else {
+        try {
+          parsed = await callAtlas({
+            persona: session.persona,
+            messages: recent,
+            propertiesCatalog: propsCatalog,
+            knownPreferences: session.preferences,
+            knownLead: session.lead,
+            knownBroker,
+            fast
+          })
+        } catch (e) {
+          console.error('Atlas error:', e)
+          return handleCORS(NextResponse.json({ error: 'AI error: ' + e.message }, { status: 500 }))
+        }
       }
 
       const assistantReply = parsed.reply || "I'm here. Tell me what you're looking for."
