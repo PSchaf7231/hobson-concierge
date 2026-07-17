@@ -536,9 +536,28 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
     if (f.location) parts.push(`in ${f.location}`)
     if (f.propertyType) parts.push(f.propertyType.toLowerCase())
     if (f.priceMin || f.priceMax) {
-      const mn = f.priceMin ? `$${Number(f.priceMin).toLocaleString()}` : '$0'
-      const mx = f.priceMax ? `$${Number(f.priceMax).toLocaleString()}` : 'no cap'
-      parts.push(`priced ${mn} to ${mx}`)
+      // The chat backend's budget parser only recognizes "$Xk"/"$XM" shorthand
+      // (no thousands-comma numbers) and derives a single multiplier from
+      // whichever unit is on the LAST number in a range, applying it to both
+      // ends — so both ends must share one unit. It also can't parse "k" on
+      // the first number of a range (only "m"/"million"/"mm" work there), so
+      // for the "k" case the min is left bare, e.g. "$300 to $750k".
+      const fmtM = (v) => parseFloat((v / 1_000_000).toFixed(2))
+      const fmtK = (v) => Math.round(v / 1000)
+      if (f.priceMin && f.priceMax) {
+        const min = Number(f.priceMin), max = Number(f.priceMax)
+        if (max >= 1_000_000 || min >= 1_000_000) {
+          parts.push(`priced $${fmtM(min)}M to $${fmtM(max)}M`)
+        } else {
+          parts.push(`priced $${fmtK(min)} to $${fmtK(max)}k`)
+        }
+      } else if (f.priceMin) {
+        const v = Number(f.priceMin)
+        parts.push(`priced over ${v >= 1_000_000 ? `$${fmtM(v)}M` : `$${fmtK(v)}k`}`)
+      } else {
+        const v = Number(f.priceMax)
+        parts.push(`priced under ${v >= 1_000_000 ? `$${fmtM(v)}M` : `$${fmtK(v)}k`}`)
+      }
     }
     if (f.beds && f.beds !== 'Any') parts.push(`${f.beds} beds`)
     if (f.baths && f.baths !== 'Any') parts.push(`${f.baths} baths`)
