@@ -386,9 +386,24 @@ async function liveIdxSearch({ preferences = {} } = {}) {
     budgetMin, budgetMax, beds, baths
   }
 
+  // Cache identical searches for SPARK_TTL_MS so rapid follow-up chat messages
+  // with the same filters don't re-hit Spark and trip its rate limit.
+  const cacheKey = JSON.stringify([prefs.city, prefs.county, prefs.budgetMin, prefs.budgetMax, prefs.beds, prefs.baths])
+  if (SPARK_CACHE.key === cacheKey && SPARK_CACHE.ts + SPARK_TTL_MS > Date.now()) {
+    return SPARK_CACHE.data
+  }
+
   try {
     const live = await fetchLiveMLS({ prefs, limit: 200 })
-    return live || []
+    // Preserve null (feed error) vs [] (genuine zero matches) distinction —
+    // do NOT collapse null to [] here, the caller relies on it to tell
+    // "feed unavailable" apart from "no listings found".
+    if (live) {
+      SPARK_CACHE.key = cacheKey
+      SPARK_CACHE.ts = Date.now()
+      SPARK_CACHE.data = live
+    }
+    return live
   } catch (e) {
     console.error('[liveIdxSearch] error:', e.message)
     return null
