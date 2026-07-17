@@ -1017,6 +1017,9 @@ function App() {
   const [tab, setTab] = useState('concierge')
   const [isAdmin, setIsAdmin] = useState(false)
   const [heroShowcase, setHeroShowcase] = useState([])
+  // Mobile toggle: 'chat' shows Hobson panel, 'properties' shows listings panel
+  // On desktop (lg+) both are always visible side-by-side.
+  const [mobileView, setMobileView] = useState('chat')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1024,6 +1027,11 @@ function App() {
       setIsAdmin(params.get('admin') === '1')
     }
   }, [])
+
+  // Auto-switch to properties view on mobile when new listings arrive
+  useEffect(() => {
+    if (heroShowcase.length > 0) setMobileView('properties')
+  }, [heroShowcase])
 
   function triggerSaveSearch() {
     window.dispatchEvent(new CustomEvent('hobson:save-search'))
@@ -1071,13 +1079,34 @@ function App() {
           </section>
         </main>
       ) : (
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] lg:overflow-hidden">
-          {/* LEFT panel */}
-          <ChatPanel onProperties={setHeroShowcase} />
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] lg:overflow-hidden relative">
+          {/* Mobile-only toggle: swap between Hobson chat and Properties */}
+          <div className="lg:hidden flex-shrink-0 flex items-center justify-center gap-1 px-4 pt-2 pb-1 border-b border-[#D4AF37]/15" style={{ background: NAVY }}>
+            <div className="inline-flex items-center rounded-full border border-[#D4AF37]/30 p-0.5">
+              <button
+                onClick={() => setMobileView('chat')}
+                className={`text-[10px] uppercase tracking-[0.22em] px-3 py-1 rounded-full transition ${mobileView === 'chat' ? 'bg-[#D4AF37] text-[#0A1628] font-semibold' : 'text-[#D4AF37]/70'}`}
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => setMobileView('properties')}
+                className={`text-[10px] uppercase tracking-[0.22em] px-3 py-1 rounded-full transition ${mobileView === 'properties' ? 'bg-[#D4AF37] text-[#0A1628] font-semibold' : 'text-[#D4AF37]/70'}`}
+              >
+                Properties{heroShowcase.length > 0 ? ` · ${heroShowcase.length}` : ''}
+              </button>
+            </div>
+          </div>
+          {/* LEFT panel — chat/hobson (visible on desktop always, on mobile only when 'chat' selected) */}
+          <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:block min-h-0`}>
+            <ChatPanel onProperties={setHeroShowcase} />
+          </div>
           {/* Gold vertical divider */}
           <div className="hidden lg:block w-px" style={{ background: `linear-gradient(to bottom, transparent 0%, ${GOLD} 8%, ${GOLD} 92%, transparent 100%)` }} />
-          {/* RIGHT panel */}
-          <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} />
+          {/* RIGHT panel — properties (visible on desktop always, on mobile only when 'properties' selected) */}
+          <div className={`${mobileView === 'properties' ? 'block' : 'hidden'} lg:block min-h-0`}>
+            <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} />
+          </div>
         </main>
       )}
 
