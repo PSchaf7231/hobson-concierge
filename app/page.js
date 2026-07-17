@@ -662,7 +662,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: searchOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="m6 9 6 6 6-6"/></svg>
         </button>
         {searchOpen && (
-          <div className="absolute top-full left-6 right-6 mt-2 rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-4 z-40 max-h-[52vh] overflow-y-auto hobson-scroll"
+          <div className="fixed inset-x-2 top-14 bottom-4 lg:absolute lg:inset-auto lg:top-full lg:left-6 lg:right-6 lg:bottom-auto lg:mt-2 lg:max-h-[52vh] rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-4 z-50 overflow-y-auto hobson-scroll"
                style={{ background: 'linear-gradient(to bottom, rgba(10,22,40,0.98), rgba(11,21,38,0.98))' }}>
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
@@ -1030,7 +1030,7 @@ function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: NAVY }}>
+    <div className="min-h-screen lg:h-screen flex flex-col overflow-y-auto lg:overflow-hidden" style={{ background: NAVY }}>
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
         <div className="max-w-[1600px] mx-auto px-6 py-2 flex items-center justify-between gap-4">
@@ -1071,7 +1071,7 @@ function App() {
           </section>
         </main>
       ) : (
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] overflow-hidden">
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] lg:overflow-hidden">
           {/* LEFT panel */}
           <ChatPanel onProperties={setHeroShowcase} />
           {/* Gold vertical divider */}
