@@ -187,6 +187,7 @@ function InlineLeadCapture() {
   const [phone, setPhone] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -232,15 +233,35 @@ function InlineLeadCapture() {
   const inputCls = "h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:bg-[#D4AF37]/15 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-[11px] px-2.5 transition"
 
   return (
-    <div className="flex items-center gap-1.5 flex-shrink-0">
-      <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-24`} />
-      <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-24`} />
-      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-36`} />
-      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-36`} />
-      <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition">
-        {busy ? '…' : 'Save'}
+    <>
+      {/* Desktop / tablet: inline 4-field capture bar */}
+      <div className="hidden lg:flex items-center gap-1.5 flex-shrink-0">
+        <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-24`} />
+        <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-24`} />
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-36`} />
+        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-36`} />
+        <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition">
+          {busy ? '…' : 'Save'}
+        </button>
+      </div>
+      {/* Mobile: compact "Save" button that opens the modal */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition flex-shrink-0"
+      >
+        Save Search
       </button>
-    </div>
+      <LeadCaptureModal
+        open={mobileOpen}
+        onOpenChange={setMobileOpen}
+        sessionId={typeof window !== 'undefined' ? localStorage.getItem('atlas_session') : null}
+        onCaptured={() => {
+          try { localStorage.setItem('atlas_lead_captured', '1'); localStorage.setItem('atlas_lead_name', firstName.trim()) } catch (e) {}
+          setDone(true)
+          setMobileOpen(false)
+        }}
+      />
+    </>
   )
 }
 
@@ -589,7 +610,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
              padding = px-6 pb-6
          Any adjustment here regresses the Concierge window and MUST be re-approved. */}
       <div className="px-6 pt-3 pb-6 flex-shrink-0 flex justify-center">
-        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: '#0B1526' }}>
+        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-full lg:w-[75%] aspect-[16/9]" style={{ background: '#0B1526' }}>
           {/* HeyGen recorded avatar — autoplays on loop, muted (browser policy). */}
           <video
             ref={(el) => { if (el) window.__hobsonVideo = el }}
@@ -650,7 +671,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
             </div>
 
             {/* PRIMARY ROW — 6 fields + More Filters + Search */}
-            <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr] gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr] gap-2">
               <div>
                 <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Location</label>
                 <input value={filters.location} onChange={e => setFilters(f => ({...f, location: e.target.value}))} placeholder="City, Zip, or Neighborhood" className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5" />
@@ -709,7 +730,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
             {moreFilters && (
               <div className="mt-4 pt-4 border-t border-[#D4AF37]/20">
                 <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold mb-3">More Filters</div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   <div>
                     <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Property Status</label>
                     <CompactSelect value={filters.status} onChange={v => setFilters(f => ({...f, status: v}))} options={STATUS_OPTS} />
@@ -752,7 +773,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
       {/* Middle + Bottom UNIFIED: one chat box containing scrollable history AND input.
           Width matches Hobson video (75%), centered, fills the remaining vertical space. */}
       <div className="flex-1 min-h-0 px-6 pt-3 pb-6 flex justify-center">
-        <div className="w-[75%] flex flex-col min-h-0 rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg overflow-hidden">
+        <div className="w-full lg:w-[75%] flex flex-col min-h-0 rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg overflow-hidden">
           {/* Scrollable message history — scrollbar is INSIDE this box */}
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4 hobson-scroll">
             {messages.map((m, i) => (
