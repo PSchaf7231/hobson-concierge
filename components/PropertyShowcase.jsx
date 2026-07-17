@@ -49,17 +49,6 @@ function PropertyCard({ p, index = 0 }) {
           style={{ filter: 'brightness(.92)' }}
           loading="lazy"
         />
-        {/* Status pill top-left */}
-        <span
-          className="absolute top-3.5 left-3.5 text-[#EDF1F7] text-[10px] uppercase font-medium px-3 py-1.5 rounded-full backdrop-blur-md"
-          style={{
-            letterSpacing: '0.22em',
-            background: 'rgba(11, 21, 38, 0.72)',
-            border: '1px solid rgba(255, 255, 255, 0.12)'
-          }}
-        >
-          {statusPill(p)}
-        </span>
       </div>
 
       {/* Gold hairline divider */}
@@ -213,15 +202,15 @@ export default function PropertyShowcase({ properties = [] }) {
       {hasProps && (
         <div className="relative pb-8">
           <div
-            className="mx-auto overflow-y-auto scroll-smooth px-2"
+            className="mx-auto overflow-y-auto scroll-smooth px-2 hobson-scroll"
             style={{
-              width: '92%',
-              maxWidth: '920px',
-              maxHeight: '640px',
+              width: '98%',
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 200px)',
               scrollbarWidth: 'thin'
             }}
           >
-            <div className="grid grid-cols-2 gap-6 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
               {properties.map((p, i) => (
                 <PropertyCard key={p.id || p.listingId || i} p={p} index={i} />
               ))}

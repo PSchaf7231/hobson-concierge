@@ -282,6 +282,7 @@ async function fetchLiveMLS({ prefs = {}, limit = 120 } = {}) {
     "PropertyType ne 'Commercial Lease'",
     "ListPrice ge 500000"
   ]
+  if (prefs.county) filters.push(`CountyOrParish eq '${String(prefs.county).replace(/'/g, "''")}'`)
   if (prefs.city) filters.push(`City eq '${String(prefs.city).replace(/'/g, "''")}'`)
   if (prefs.budgetMin) filters.push(`ListPrice ge ${Number(prefs.budgetMin)}`)
   if (prefs.budgetMax) filters.push(`ListPrice le ${Number(prefs.budgetMax)}`)
@@ -364,6 +365,36 @@ async function getLiveCatalog(db, prefs = {}) {
   return await db.collection('properties').find({}).toArray()
 }
 
+// ============= LIVE IDX SEARCH =============
+// Direct real-time query to Spark RESO Web API. NEVER writes to MongoDB.
+// Takes a preferences object (location, budget_min, budget_max, beds) and
+// applies defaults (Palm Beach County, $400,000 – $10,000,000) when nothing set.
+// Returns live JSON straight to Hobson. Callers must handle fallback themselves.
+async function liveIdxSearch({ preferences = {} } = {}) {
+  if (!process.env.SPARK_API_TOKEN) return null
+
+  const loc = preferences.location || preferences.city || preferences.county || 'Palm Beach County'
+  const isCounty = /county|parish/i.test(loc)
+  const budgetMin = preferences.budget_min ?? preferences.budgetMin ?? 400000
+  const budgetMax = preferences.budget_max ?? preferences.budgetMax ?? 10_000_000
+  const beds = preferences.beds ?? null
+  const baths = preferences.baths ?? null
+
+  const prefs = {
+    city: isCounty ? null : loc,
+    county: isCounty ? loc.replace(/\s*county\s*/i, '').trim() : null,
+    budgetMin, budgetMax, beds, baths
+  }
+
+  try {
+    const live = await fetchLiveMLS({ prefs, limit: 200 })
+    return live || []
+  } catch (e) {
+    console.error('[liveIdxSearch] error:', e.message)
+    return null
+  }
+}
+
 // ============= LLM CALL =============
 async function callAtlas({ persona, messages, propertiesCatalog, knownPreferences, knownLead, knownBroker = null, fast = false }) {
   const personaCfg = PERSONAS[persona] || PERSONAS.residential
@@ -399,7 +430,7 @@ OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
   "lead_score": 0-100,
   "lead_tier": "cold" | "warm" | "hot"
 }
-Merge new info with KNOWN values — preserve previously captured fields if user hasn't changed them. recommended_ids must be a subset of catalog ids. Only fill recommendations when you have enough criteria; otherwise empty array.`
+Merge new info with KNOWN values — preserve previously captured fields if user hasn't changed them. recommended_ids must be a subset of catalog ids. ALWAYS return 3-6 recommendations from the catalog when the user has expressed even ONE criterion (a city, a budget hint, a lifestyle cue, or a request to "see" / "show" / "browse" listings). For broad queries like "show me everything in Palm Beach County" — pick 3-6 DIVERSE samples that span the price range and neighborhoods. Only return an empty array when the user has said nothing that hints at property interest (e.g. pure greetings, unrelated questions, or when the catalog is genuinely empty).`
 
   // Calls Anthropic directly. No Emergent gateway, no monthly credit pool to run dry.
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -755,24 +786,68 @@ async function handleRoute(request, { params }) {
         'Vero Beach','Stuart','Hobe Sound'
       ]
       const msgLc = ' ' + String(message || '').toLowerCase() + ' '
-      let extractedCity = null
-      // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
-      for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
-        if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
-            msgLc.includes(' ' + city.toLowerCase() + ',') ||
-            msgLc.includes(' ' + city.toLowerCase() + '.') ||
-            msgLc.includes(' ' + city.toLowerCase() + '?')) {
-          extractedCity = city
+      // COUNTY FIRST: if user says "Palm Beach County", "Miami-Dade County",
+      // "Broward County", etc., treat as county filter — pulls the ENTIRE
+      // county's inventory, not just one city. County wins over city match.
+      const COUNTIES = ['Palm Beach', 'Miami-Dade', 'Broward', 'Martin', 'St. Lucie', 'Indian River', 'Collier', 'Lee', 'Monroe']
+      let extractedCounty = null
+      for (const county of COUNTIES) {
+        if (msgLc.includes(' ' + county.toLowerCase() + ' county')) {
+          extractedCounty = county
           break
         }
       }
-      // Extract budget hints ($3M, $2-5M, $4 million, etc.)
+      // City shorthand map — check these BEFORE the full-name loop so "Boca"
+      // resolves to "Boca Raton" instead of falling through to county default.
+      const CITY_SHORTHANDS = {
+        'boca': 'Boca Raton',
+        'delray': 'Delray Beach',
+        'wpb': 'West Palm Beach',
+        'pbg': 'Palm Beach Gardens',
+        'ftl': 'Fort Lauderdale',
+        'fll': 'Fort Lauderdale',
+        'sib': 'Sunny Isles Beach'
+      }
+      let extractedCity = null
+      if (!extractedCounty) {
+        for (const [short, full] of Object.entries(CITY_SHORTHANDS)) {
+          if (new RegExp(`\\b${short}\\b`, 'i').test(String(message || ''))) {
+            extractedCity = full
+            break
+          }
+        }
+        if (!extractedCity) {
+          // Longest match wins (so "Palm Beach Gardens" beats "Palm Beach")
+          for (const city of SFL_CITIES.slice().sort((a, b) => b.length - a.length)) {
+            if (msgLc.includes(' ' + city.toLowerCase() + ' ') ||
+                msgLc.includes(' ' + city.toLowerCase() + ',') ||
+                msgLc.includes(' ' + city.toLowerCase() + '.') ||
+                msgLc.includes(' ' + city.toLowerCase() + '?')) {
+              extractedCity = city
+              break
+            }
+          }
+        }
+      }
+      // Extract budget hints ($3M, $2-5M, $4 million, $3M+, over $500K, etc.)
       let extractedBudgetMin = null, extractedBudgetMax = null
+      // "$X+", "$X and up", "$X or more", "over $X", "above $X" → minimum only, no cap
+      const openMatch = message && message.match(/(?:over|above|from|starting at|at least|min(?:imum)?)\s+\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)|\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)\s*(?:\+|and up|or more|plus)/i)
       const rangeMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(?:m|million|mm)?\s*(?:-|to|and)\s*\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
-      if (rangeMatch) {
+      const underMatch = message && message.match(/(?:under|below|max(?:imum)?|up to)\s+\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
+      if (openMatch) {
+        const num = openMatch[1] || openMatch[3]
+        const unit = openMatch[2] || openMatch[4]
+        const mult = /k/i.test(unit) ? 1000 : 1_000_000
+        extractedBudgetMin = Math.round(parseFloat(num) * mult)
+        extractedBudgetMax = null
+      } else if (rangeMatch) {
         const mult = /k/i.test(rangeMatch[3]) ? 1000 : 1_000_000
         extractedBudgetMin = Math.round(parseFloat(rangeMatch[1]) * mult)
         extractedBudgetMax = Math.round(parseFloat(rangeMatch[2]) * mult)
+      } else if (underMatch) {
+        const mult = /k/i.test(underMatch[2]) ? 1000 : 1_000_000
+        extractedBudgetMax = Math.round(parseFloat(underMatch[1]) * mult)
       } else {
         const singleMatch = message && message.match(/\$?(\d+(?:\.\d+)?)\s*(m|million|mm|k)/i)
         if (singleMatch) {
@@ -783,31 +858,67 @@ async function handleRoute(request, { params }) {
         }
       }
 
+      // Bedroom extraction: "3 bed", "3 bedroom", "3bd", "3br", "3+ beds"
+      let extractedBeds = null
+      const bedMatch = message && message.match(/(\d+)\s*(?:\+\s*)?(?:bed(?:room)?s?|bd|br)\b/i)
+      if (bedMatch) extractedBeds = parseInt(bedMatch[1], 10)
+
+      // Current-message extraction OVERRIDES stale session prefs — so if the
+      // user types "Palm Beach County" now, we don't get stuck on last turn's
+      // "Palm Beach" city. County wins over city, current message wins over cache.
       const mappedPrefs = {
-        city: rawPrefs.city || rawPrefs.location || extractedCity || null,
-        budgetMin: rawPrefs.budgetMin ?? rawPrefs.budget_min ?? extractedBudgetMin ?? null,
-        budgetMax: rawPrefs.budgetMax ?? rawPrefs.budget_max ?? extractedBudgetMax ?? null,
-        beds: rawPrefs.beds ?? null,
+        location: extractedCounty ? `${extractedCounty} County` : (extractedCity || rawPrefs.location || rawPrefs.city || null),
+        budget_min: extractedBudgetMin ?? rawPrefs.budget_min ?? rawPrefs.budgetMin ?? null,
+        budget_max: extractedBudgetMax !== undefined ? extractedBudgetMax : (rawPrefs.budget_max ?? rawPrefs.budgetMax ?? null),
+        beds: extractedBeds ?? rawPrefs.beds ?? null,
         baths: rawPrefs.baths ?? null
       }
-      const propsCatalog = await getLiveCatalog(db, mappedPrefs)
+      // LIVE IDX pass-through — no DB storage. NO seed fallback for user-facing
+      // queries. Feed status feeds into the LLM prompt so it never invents.
+      const liveResult = await liveIdxSearch({ preferences: mappedPrefs })
+      // Distinguish 3 outcomes:
+      //   null      → feed unreachable (Spark 500/429/timeout)
+      //   []        → feed OK, zero matches
+      //   [items…]  → results
+      let feedStatus = 'OK'
+      let propsCatalog = []
+      if (liveResult === null) feedStatus = 'FEED_UNAVAILABLE'
+      else if (liveResult.length === 0) feedStatus = 'ZERO_MATCHES'
+      else propsCatalog = liveResult
       const brokerSettings = await db.collection('settings').findOne({ id: 'global' })
       const knownBroker = brokerSettings?.broker || null
 
       let parsed
-      try {
-        parsed = await callAtlas({
-          persona: session.persona,
-          messages: recent,
-          propertiesCatalog: propsCatalog,
-          knownPreferences: session.preferences,
-          knownLead: session.lead,
-          knownBroker,
-          fast
-        })
-      } catch (e) {
-        console.error('Atlas error:', e)
-        return handleCORS(NextResponse.json({ error: 'AI error: ' + e.message }, { status: 500 }))
+      // Short-circuit: when the live feed is unavailable or empty, DO NOT call the LLM
+      // (prevents Claude from inventing "curated" properties or roleplaying about a
+      // "thin catalog"). Return the mandated response text verbatim.
+      if (feedStatus === 'FEED_UNAVAILABLE') {
+        parsed = {
+          reply: 'The live property feed is temporarily unavailable, please try again in a few minutes.',
+          recommended_ids: [],
+          lead: null, preferences: null, lead_tier: session.lead_tier, lead_score: session.lead_score, stage: session.stage
+        }
+      } else if (feedStatus === 'ZERO_MATCHES') {
+        parsed = {
+          reply: 'I searched the live MLS and did not find any listings matching those criteria. Try broadening the price range or the location.',
+          recommended_ids: [],
+          lead: null, preferences: null, lead_tier: session.lead_tier, lead_score: session.lead_score, stage: session.stage
+        }
+      } else {
+        try {
+          parsed = await callAtlas({
+            persona: session.persona,
+            messages: recent,
+            propertiesCatalog: propsCatalog,
+            knownPreferences: session.preferences,
+            knownLead: session.lead,
+            knownBroker,
+            fast
+          })
+        } catch (e) {
+          console.error('Atlas error:', e)
+          return handleCORS(NextResponse.json({ error: 'AI error: ' + e.message }, { status: 500 }))
+        }
       }
 
       const assistantReply = parsed.reply || "I'm here. Tell me what you're looking for."
@@ -817,9 +928,31 @@ async function handleRoute(request, { params }) {
       session.preferences = mergeObj(session.preferences, parsed.preferences)
       const validIds = new Set(propsCatalog.map(p => p.id))
       // 🛡️ Commercial side NEVER shows listings — strip any property recs regardless of what the LLM returned
-      const recIds = session.persona === 'commercial'
+      let recIds = session.persona === 'commercial'
         ? []
         : (parsed.recommended_ids || []).filter(id => validIds.has(id))
+
+      // 🎯 FALLBACK: if Claude returned zero recs but the catalog has listings AND the user
+      // expressed even minimal property interest ("show", "see", "browse", city name, budget),
+      // auto-pick 6 diverse listings spread across the price range so the right panel never
+      // sits empty when live inventory exists.
+      if (recIds.length === 0 && session.persona !== 'commercial' && propsCatalog.length > 0) {
+        const msgLower = String(message || '').toLowerCase()
+        const propertyIntent = /show|see|browse|look|find|any|price|home|house|condo|estate|villa|penthouse|apartment|property|listing|palm|miami|delray|boca|hollywood|beach|county|market|inventory|\$|million|budget|bed|bath/i.test(msgLower)
+        if (propertyIntent) {
+          const sorted = [...propsCatalog].sort((a, b) => (a.price || 0) - (b.price || 0))
+          const n = sorted.length
+          // Pick 6 evenly-spaced samples across the price distribution
+          const pickCount = Math.min(6, n)
+          const step = n / pickCount
+          const picked = []
+          for (let i = 0; i < pickCount; i++) {
+            const idx = Math.min(n - 1, Math.floor(i * step + step / 2))
+            if (sorted[idx] && !picked.find(p => p.id === sorted[idx].id)) picked.push(sorted[idx])
+          }
+          recIds = picked.map(p => p.id)
+        }
+      }
       session.recommended_ids = recIds
       session.stage = parsed.stage || session.stage
       if (typeof parsed.lead_score === 'number') session.lead_score = Math.max(0, Math.min(100, Math.round(parsed.lead_score)))
@@ -876,9 +1009,16 @@ async function handleRoute(request, { params }) {
         console.error('BoldTrail auto-push failed:', pushErr.message)
       }
 
-      const recommendedProperties = propsCatalog
-        .filter(p => recIds.includes(p.id))
-        .map(({ _id, ...rest }) => rest)
+      // Return the FULL matched inventory to the frontend, not just Claude's picks.
+      // Real-estate expectation: user sees ALL matches (can be 50, 100, 200+) and
+      // scrolls / narrows via follow-up queries. Claude's `recIds` become the
+      // highlighted "featured" picks, but every match is shown.
+      const recommendedProperties = session.persona === 'commercial'
+        ? []
+        : propsCatalog.map(({ _id, ...rest }) => ({
+            ...rest,
+            featured: recIds.includes(rest.id)
+          }))
       const favoriteProperties = propsCatalog
         .filter(p => (session.favorite_ids || []).includes(p.id))
         .map(({ _id, ...rest }) => rest)
