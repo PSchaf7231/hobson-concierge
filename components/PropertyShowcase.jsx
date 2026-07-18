@@ -42,7 +42,7 @@ function statusPill(p) {
   return 'New Listing'
 }
 
-function PropertyCard({ p, index = 0 }) {
+function PropertyCard({ p, index = 0, isFavorite = false, onToggleFavorite }) {
   const [showContact, setShowContact] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   return (
@@ -65,6 +65,19 @@ function PropertyCard({ p, index = 0 }) {
           style={{ filter: 'brightness(.92)' }}
           loading="lazy"
         />
+        {onToggleFavorite && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(p.id) }}
+            aria-label={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+            title={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+            className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full flex items-center justify-center bg-[#0A1628]/70 hover:bg-[#0A1628]/90 backdrop-blur-sm border border-[#D4AF37]/30 transition"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill={isFavorite ? '#D4AF37' : 'none'} stroke="#D4AF37" strokeWidth="1.8">
+              <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Gold hairline divider */}
@@ -312,7 +325,7 @@ function PropertyDetailModal({ p, index = 0, onClose }) {
   )
 }
 
-export default function PropertyShowcase({ properties = [] }) {
+export default function PropertyShowcase({ properties = [], favIds, onToggleFavorite, sessionId, favoritesCount = 0 }) {
   const [imgIdx, setImgIdx] = useState(0)
   const hasProps = properties.length > 0
   const shown = properties.slice(0, 4)
@@ -366,6 +379,17 @@ export default function PropertyShowcase({ properties = [] }) {
                 : 'Awaiting Criteria'}
             </div>
           </div>
+          {sessionId && favoritesCount > 0 && (
+            <a
+              href={`/shortlist/${sessionId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37] hover:text-[#E6C878] transition"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#D4AF37" stroke="#D4AF37" strokeWidth="1.5"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+              {favoritesCount} Saved →
+            </a>
+          )}
         </div>
       </div>
 
@@ -411,7 +435,7 @@ export default function PropertyShowcase({ properties = [] }) {
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pt-2">
               {properties.map((p, i) => (
-                <PropertyCard key={p.id || p.listingId || i} p={p} index={i} />
+                <PropertyCard key={p.id || p.listingId || i} p={p} index={i} isFavorite={favIds ? favIds.has(p.id) : false} onToggleFavorite={onToggleFavorite} />
               ))}
             </div>
           </div>

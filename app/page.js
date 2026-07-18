@@ -312,7 +312,7 @@ function CompactSelect({ value, onChange, options, placeholder = 'Any', classNam
 // =====================================================================
 // CHAT PANEL (left half of concierge)
 // =====================================================================
-function ChatPanel({ onProperties, onViewCountUpdate }) {
+function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   const [persona, setPersona] = useState('residential')
   const [sessionId, setSessionId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -503,6 +503,13 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
     setFavorites(data.favorites || [])
     setFavIds(new Set((data.favorites || []).map(f => f.id)))
   }
+
+  // Surface favorite state + the toggle handler up to App so RightPanel/PropertyShowcase
+  // can render a heart button on cards — favIds/toggleFavorite previously existed only
+  // here with no UI ever calling them, so favoriting was completely unreachable.
+  useEffect(() => {
+    onFavoritesChange && onFavoritesChange({ favIds, toggleFavorite, sessionId, favoritesCount: favorites.length })
+  }, [favIds, sessionId, favorites.length])
 
   function resetChat() {
     localStorage.removeItem('atlas_session')
@@ -818,7 +825,7 @@ function IdleCrossfade() {
   )
 }
 
-function RightPanel({ tab, properties, onSaveSearch }) {
+function RightPanel({ tab, properties, onSaveSearch, favIds, onToggleFavorite, sessionId, favoritesCount }) {
   const hasProps = properties.length > 0
   return (
     <div className="relative h-full overflow-hidden" style={{ background: NAVY }}>
@@ -833,7 +840,7 @@ function RightPanel({ tab, properties, onSaveSearch }) {
       {tab === 'concierge' && !hasProps && <IdleCrossfade />}
       {tab === 'concierge' && hasProps && (
         <div className="absolute inset-0 pt-16 pb-[92px]">
-          <PropertyShowcase properties={properties} />
+          <PropertyShowcase properties={properties} favIds={favIds} onToggleFavorite={onToggleFavorite} sessionId={sessionId} favoritesCount={favoritesCount} />
         </div>
       )}
 
@@ -984,6 +991,7 @@ function App() {
   const [tab, setTab] = useState('concierge')
   const [isAdmin, setIsAdmin] = useState(false)
   const [heroShowcase, setHeroShowcase] = useState([])
+  const [favState, setFavState] = useState({ favIds: new Set(), toggleFavorite: () => {}, sessionId: null, favoritesCount: 0 })
   // Mobile toggle: 'chat' shows Hobson panel, 'properties' shows listings panel
   // On desktop (lg+) both are always visible side-by-side.
   const [mobileView, setMobileView] = useState('chat')
@@ -1066,13 +1074,13 @@ function App() {
           </div>
           {/* LEFT panel — chat/hobson (visible on desktop always, on mobile only when 'chat' selected) */}
           <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:block min-h-0`}>
-            <ChatPanel onProperties={setHeroShowcase} />
+            <ChatPanel onProperties={setHeroShowcase} onFavoritesChange={setFavState} />
           </div>
           {/* Gold vertical divider */}
           <div className="hidden lg:block w-px" style={{ background: `linear-gradient(to bottom, transparent 0%, ${GOLD} 8%, ${GOLD} 92%, transparent 100%)` }} />
           {/* RIGHT panel — properties (visible on desktop always, on mobile only when 'properties' selected) */}
           <div className={`${mobileView === 'properties' ? 'block' : 'hidden'} lg:block min-h-0`}>
-            <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} />
+            <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} favIds={favState.favIds} onToggleFavorite={favState.toggleFavorite} sessionId={favState.sessionId} favoritesCount={favState.favoritesCount} />
           </div>
         </main>
       )}
