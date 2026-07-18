@@ -904,21 +904,31 @@ async function handleRoute(request, { params }) {
       const knownBroker = brokerSettings?.broker || null
 
       let parsed
-      // Short-circuit: when the live feed is unavailable or empty, DO NOT call the LLM
+      // Degraded feed: force the mandated reply text and an empty recommendation list
       // (prevents Claude from inventing "curated" properties or roleplaying about a
-      // "thin catalog"). Return the mandated response text verbatim.
-      if (feedStatus === 'FEED_UNAVAILABLE') {
-        parsed = {
-          reply: 'The live property feed is temporarily unavailable, please try again in a few minutes.',
-          recommended_ids: [],
-          lead: null, preferences: null, lead_tier: session.lead_tier, lead_score: session.lead_score, stage: session.stage
+      // "thin catalog") — but STILL run the LLM with an empty catalog so name/email/
+      // phone/preferences the user just stated are captured, not silently dropped.
+      // Uses fast:true (cheaper model) since only the structured fields matter here,
+      // not prose quality — the reply text itself gets overwritten below regardless.
+      if (feedStatus === 'FEED_UNAVAILABLE' || feedStatus === 'ZERO_MATCHES') {
+        try {
+          parsed = await callAtlas({
+            persona: session.persona,
+            messages: recent,
+            propertiesCatalog: [],
+            knownPreferences: session.preferences,
+            knownLead: session.lead,
+            knownBroker,
+            fast: true
+          })
+        } catch (e) {
+          console.error('Atlas error (degraded-feed lead capture):', e)
+          parsed = { lead: null, preferences: null, lead_tier: session.lead_tier, lead_score: session.lead_score, stage: session.stage }
         }
-      } else if (feedStatus === 'ZERO_MATCHES') {
-        parsed = {
-          reply: 'I searched the live MLS and did not find any listings matching those criteria. Try broadening the price range or the location.',
-          recommended_ids: [],
-          lead: null, preferences: null, lead_tier: session.lead_tier, lead_score: session.lead_score, stage: session.stage
-        }
+        parsed.reply = feedStatus === 'FEED_UNAVAILABLE'
+          ? 'The live property feed is temporarily unavailable, please try again in a few minutes.'
+          : 'I searched the live MLS and did not find any listings matching those criteria. Try broadening the price range or the location.'
+        parsed.recommended_ids = []
       } else {
         try {
           parsed = await callAtlas({

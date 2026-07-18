@@ -312,7 +312,7 @@ function CompactSelect({ value, onChange, options, placeholder = 'Any', classNam
 // =====================================================================
 // CHAT PANEL (left half of concierge)
 // =====================================================================
-function ChatPanel({ onProperties, onViewCountUpdate }) {
+function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   const [persona, setPersona] = useState('residential')
   const [sessionId, setSessionId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -324,7 +324,6 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
   const [leadTier, setLeadTier] = useState(null)
   const [leadScore, setLeadScore] = useState(null)
   const [listening, setListening] = useState(false)
-  const [viewProperty, setViewProperty] = useState(null)
   const [speakingIdx, setSpeakingIdx] = useState(null)
   const [orbActive, setOrbActive] = useState(false)
   const [orbSpeaking, setOrbSpeaking] = useState(false)
@@ -505,6 +504,13 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
     setFavIds(new Set((data.favorites || []).map(f => f.id)))
   }
 
+  // Surface favorite state + the toggle handler up to App so RightPanel/PropertyShowcase
+  // can render a heart button on cards — favIds/toggleFavorite previously existed only
+  // here with no UI ever calling them, so favoriting was completely unreachable.
+  useEffect(() => {
+    onFavoritesChange && onFavoritesChange({ favIds, toggleFavorite, sessionId, favoritesCount: favorites.length })
+  }, [favIds, sessionId, favorites.length])
+
   function resetChat() {
     localStorage.removeItem('atlas_session')
     setSessionId(null); setMessages([]); setRecommended([]); setFavorites([]); setFavIds(new Set()); setLeadTier(null); setLeadScore(null)
@@ -600,36 +606,118 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
     : ['Stabilized MOB near hospital, 7%+ cap', 'Class A office, Palm Beach County', 'ASC with NNN lease, 8%+ cap']
 
   return (
-    <div className="h-full flex flex-col overflow-hidden" style={{ background: NAVY, color: '#F5EDE0' }}>
+    <div className="h-full flex flex-col overflow-hidden overflow-y-auto lg:overflow-y-auto hobson-scroll" style={{ background: NAVY, color: '#F5EDE0' }}>
       {/* Top: small dual brand toggle */}
-      <div className="px-6 pt-5 pb-2 flex items-center justify-between flex-shrink-0">
+      <div className="px-5 pt-4 pb-2 flex items-center justify-between flex-shrink-0">
         <div className="inline-flex items-center gap-0.5 rounded-full border border-[#D4AF37]/30 p-0.5">
           <button onClick={() => { if (persona !== 'residential') { setPersona('residential'); resetChat() } }} className={`text-[9px] uppercase tracking-[0.2em] px-2.5 py-1 rounded-full transition ${persona === 'residential' ? 'bg-[#D4AF37] text-[#0A1628] font-semibold' : 'text-[#D4AF37]/70 hover:text-[#D4AF37]'}`}>
-            Anasa Collection
+            Anasa
           </button>
           <button onClick={() => { if (persona !== 'commercial') { setPersona('commercial'); resetChat() } }} className={`text-[9px] uppercase tracking-[0.2em] px-2.5 py-1 rounded-full transition ${persona === 'commercial' ? 'bg-[#D4AF37] text-[#0A1628] font-semibold' : 'text-[#D4AF37]/70 hover:text-[#D4AF37]'}`}>
-            Next Endeavor CRE
+            Next Endeavor
           </button>
         </div>
         {leadTier && <TierBadge tier={leadTier} score={leadScore} />}
       </div>
 
-      {/* Hero copy — two lines, "Luxury" starts under end of "Commercial" */}
-      <div className="px-6 pt-3 pb-4 flex-shrink-0 flex justify-center">
-        <div style={{ fontFamily: SERIF, fontWeight: 500 }} className="inline-block text-left text-[1.75rem] lg:text-[2rem] leading-[1.2] text-[#F5EDE0]">
-          <div>Smart <span className="italic text-[#D4AF37]">Commercial</span> Investments.</div>
-          <div className="pl-[7.8em]"><span className="italic text-[#D4AF37]">Luxury</span> Homes Done Right.</div>
+      {/* Search Criteria — ALWAYS VISIBLE, no collapse. Search is the primary
+          action in this layout; chat/Hobson are secondary tools below it. */}
+      <div className="flex-shrink-0 px-5 pb-3">
+        <div className="rounded-xl border border-[#D4AF37]/25 p-3" style={{ background: 'rgba(212, 175, 55, 0.04)' }}>
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="text-[9px] uppercase tracking-[0.26em] text-[#D4AF37] font-semibold">Search</div>
+            {recommended.length > 0 && <div className="text-[9px] text-[#F5EDE0]/50">{recommended.length} shown</div>}
+          </div>
+
+          <div className="space-y-2">
+            <input value={filters.location} onChange={e => setFilters(f => ({...f, location: e.target.value}))} placeholder="City, Zip, or Neighborhood" className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5" />
+            <div className="grid grid-cols-2 gap-2">
+              <CompactSelect value={filters.priceMin} onChange={v => setFilters(f => ({...f, priceMin: v}))} options={PRICE_OPTS} placeholder="Min Price" />
+              <CompactSelect value={filters.priceMax} onChange={v => setFilters(f => ({...f, priceMax: v}))} options={PRICE_OPTS} placeholder="Max Price" />
+              <CompactSelect value={filters.beds} onChange={v => setFilters(f => ({...f, beds: v}))} options={BED_OPTS} placeholder="Beds" />
+              <CompactSelect value={filters.baths} onChange={v => setFilters(f => ({...f, baths: v}))} options={BATH_OPTS} placeholder="Baths" />
+            </div>
+            <CompactSelect value={filters.propertyType} onChange={v => setFilters(f => ({...f, propertyType: v}))} options={PROPTYPE_OPTS} placeholder="Property Type" />
+          </div>
+
+          {/* More Filters toggle + Search actions */}
+          <div className="flex items-center justify-between mt-3">
+            <button
+              type="button"
+              onClick={() => setMoreFilters(v => !v)}
+              className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37] hover:text-[#E6C878] transition"
+            >
+              {moreFilters ? '− Fewer' : '+ More Filters'}
+            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setFilters({ location:'', propertyType:'', priceMin:'', priceMax:'', beds:'', baths:'', status:'Active', sqftMin:'', yearBuiltMin:'', garage:'', pool:'', waterfront:'', hoaMax:'', view:'' })}
+                className="text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={runSearch}
+                className="px-5 py-1.5 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
+                style={{ background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)', border: '1px solid #8a6b2a' }}
+              >
+                Search
+              </button>
+            </div>
+          </div>
+
+          {/* SECONDARY TRAY — appears only when More Filters is clicked */}
+          {moreFilters && (
+            <div className="mt-3 pt-3 border-t border-[#D4AF37]/20">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Status</label>
+                  <CompactSelect value={filters.status} onChange={v => setFilters(f => ({...f, status: v}))} options={STATUS_OPTS} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Sqft (min)</label>
+                  <CompactSelect value={filters.sqftMin} onChange={v => setFilters(f => ({...f, sqftMin: v}))} options={SQFT_OPTS} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Year Built</label>
+                  <CompactSelect value={filters.yearBuiltMin} onChange={v => setFilters(f => ({...f, yearBuiltMin: v}))} options={YEAR_OPTS} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Garage</label>
+                  <CompactSelect value={filters.garage} onChange={v => setFilters(f => ({...f, garage: v}))} options={GARAGE_OPTS} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Pool</label>
+                  <CompactSelect value={filters.pool} onChange={v => setFilters(f => ({...f, pool: v}))} options={POOL_OPTS} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Waterfront</label>
+                  <CompactSelect value={filters.waterfront} onChange={v => setFilters(f => ({...f, waterfront: v}))} options={WATER_OPTS} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">HOA (max)</label>
+                  <CompactSelect value={filters.hoaMax} onChange={v => setFilters(f => ({...f, hoaMax: v}))} options={HOA_OPTS} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">View</label>
+                  <CompactSelect value={filters.view} onChange={v => setFilters(f => ({...f, view: v}))} options={VIEW_OPTS} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Hobson avatar / HeyGen video slot — portrait, centered with breathing room */}
-      {/* ⚠️ LOCKED LAYOUT (per Emergent Support directive) — DO NOT CHANGE:
-             width  = w-[75%]
-             aspect = aspect-[16/9]
-             padding = px-6 pb-6
-         Any adjustment here regresses the Concierge window and MUST be re-approved. */}
-      <div className="px-6 pt-3 pb-6 flex-shrink-0 flex justify-center">
-        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-full lg:w-[75%] aspect-[16/9]" style={{ background: '#0B1526' }}>
+      {/* Hobson avatar / HeyGen video slot — compact, secondary to search in this layout,
+          and hidden entirely on mobile (screen space there goes to search + results,
+          not a video — per explicit direction in the 2026-07-18 redesign conversation).
+          NOTE: this intentionally overrides the previous "locked" 75%-width rule from the
+          old 50/50 split layout. If reverting to a wide single chat+video column, re-apply
+          w-[75%] there, not here. */}
+      <div className="hidden lg:flex px-5 pb-3 flex-shrink-0 justify-center">
+        <div className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-full aspect-[16/9]" style={{ background: '#0B1526' }}>
           {/* HeyGen recorded avatar — autoplays on loop, muted (browser policy). */}
           <video
             ref={(el) => { if (el) window.__hobsonVideo = el }}
@@ -663,136 +751,11 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </div>
       </div>
 
-      {/* Search Criteria — gold pill + overlay filter panel (does NOT push chat down) */}
-      <div className="relative flex-shrink-0 px-6 pb-1 flex justify-center z-30">
-        <button
-          type="button"
-          onClick={() => setSearchOpen(v => !v)}
-          className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full text-[10px] uppercase tracking-[0.32em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
-          style={{
-            background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)',
-            border: '1px solid #8a6b2a',
-            boxShadow: '0 2px 8px rgba(201, 162, 39, 0.35), inset 0 1px 0 rgba(255,255,255,0.35)'
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          Search Criteria
-          {recommended.length > 0 && <span className="text-[9px] normal-case tracking-normal opacity-80">· {recommended.length} shown</span>}
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: searchOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        {searchOpen && (
-          <div className="fixed inset-x-2 top-14 bottom-4 lg:absolute lg:inset-auto lg:top-full lg:left-6 lg:right-6 lg:bottom-auto lg:mt-2 lg:max-h-[52vh] rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-4 z-50 overflow-y-auto hobson-scroll"
-               style={{ background: 'linear-gradient(to bottom, rgba(10,22,40,0.98), rgba(11,21,38,0.98))' }}>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold">Primary Filters</div>
-              <button onClick={() => setSearchOpen(false)} className="text-[#F5EDE0]/50 hover:text-[#F5EDE0] text-xs">✕</button>
-            </div>
-
-            {/* PRIMARY ROW — 6 fields + More Filters + Search */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr] gap-2">
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Location</label>
-                <input value={filters.location} onChange={e => setFilters(f => ({...f, location: e.target.value}))} placeholder="City, Zip, or Neighborhood" className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5" />
-              </div>
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Property Type</label>
-                <CompactSelect value={filters.propertyType} onChange={v => setFilters(f => ({...f, propertyType: v}))} options={PROPTYPE_OPTS} />
-              </div>
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Min Price</label>
-                <CompactSelect value={filters.priceMin} onChange={v => setFilters(f => ({...f, priceMin: v}))} options={PRICE_OPTS} />
-              </div>
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Max Price</label>
-                <CompactSelect value={filters.priceMax} onChange={v => setFilters(f => ({...f, priceMax: v}))} options={PRICE_OPTS} />
-              </div>
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Bedrooms</label>
-                <CompactSelect value={filters.beds} onChange={v => setFilters(f => ({...f, beds: v}))} options={BED_OPTS} />
-              </div>
-              <div>
-                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Bathrooms</label>
-                <CompactSelect value={filters.baths} onChange={v => setFilters(f => ({...f, baths: v}))} options={BATH_OPTS} />
-              </div>
-            </div>
-
-            {/* More Filters toggle + Search actions */}
-            <div className="flex items-center justify-between mt-4">
-              <button
-                type="button"
-                onClick={() => setMoreFilters(v => !v)}
-                className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37] hover:text-[#E6C878] transition"
-              >
-                {moreFilters ? '− Fewer Filters' : '+ More Filters'}
-              </button>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFilters({ location:'', propertyType:'', priceMin:'', priceMax:'', beds:'', baths:'', status:'Active', sqftMin:'', yearBuiltMin:'', garage:'', pool:'', waterfront:'', hoaMax:'', view:'' })}
-                  className="text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
-                >
-                  Clear
-                </button>
-                <button
-                  type="button"
-                  onClick={runSearch}
-                  className="px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
-                  style={{ background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)', border: '1px solid #8a6b2a' }}
-                >
-                  Search
-                </button>
-              </div>
-            </div>
-
-            {/* SECONDARY TRAY — appears only when More Filters is clicked */}
-            {moreFilters && (
-              <div className="mt-4 pt-4 border-t border-[#D4AF37]/20">
-                <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold mb-3">More Filters</div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Property Status</label>
-                    <CompactSelect value={filters.status} onChange={v => setFilters(f => ({...f, status: v}))} options={STATUS_OPTS} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Sqft (min)</label>
-                    <CompactSelect value={filters.sqftMin} onChange={v => setFilters(f => ({...f, sqftMin: v}))} options={SQFT_OPTS} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Year Built (min)</label>
-                    <CompactSelect value={filters.yearBuiltMin} onChange={v => setFilters(f => ({...f, yearBuiltMin: v}))} options={YEAR_OPTS} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Garage Spaces</label>
-                    <CompactSelect value={filters.garage} onChange={v => setFilters(f => ({...f, garage: v}))} options={GARAGE_OPTS} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Pool</label>
-                    <CompactSelect value={filters.pool} onChange={v => setFilters(f => ({...f, pool: v}))} options={POOL_OPTS} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Waterfront</label>
-                    <CompactSelect value={filters.waterfront} onChange={v => setFilters(f => ({...f, waterfront: v}))} options={WATER_OPTS} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">HOA Fees (max)</label>
-                    <CompactSelect value={filters.hoaMax} onChange={v => setFilters(f => ({...f, hoaMax: v}))} options={HOA_OPTS} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">View</label>
-                    <CompactSelect value={filters.view} onChange={v => setFilters(f => ({...f, view: v}))} options={VIEW_OPTS} />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* Middle + Bottom UNIFIED: one chat box containing scrollable history AND input.
-          Width matches Hobson video (75%), centered, fills the remaining vertical space. */}
-      <div className="flex-1 min-h-0 px-6 pt-3 pb-6 flex justify-center">
-        <div className="w-full lg:w-[75%] flex flex-col min-h-0 rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg overflow-hidden">
+          Full width of the (now narrow) left column — secondary to search above it,
+          not the primary width-anchor it was in the old 50/50 split layout. */}
+      <div className="flex-1 min-h-[220px] px-5 pb-4 flex justify-center">
+        <div className="w-full flex flex-col min-h-0 rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg overflow-hidden">
           {/* Scrollable message history — scrollbar is INSIDE this box */}
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4 hobson-scroll">
             {messages.map((m, i) => (
@@ -838,14 +801,6 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </div>
       </div>
 
-      <PropertyDetailDialog
-        property={viewProperty}
-        open={!!viewProperty}
-        onOpenChange={(o) => !o && setViewProperty(null)}
-        isFavorite={viewProperty ? favIds.has(viewProperty.id) : false}
-        onToggleFavorite={toggleFavorite}
-        onAskAtlas={(p) => send(`Tell me more about ${p.title} in ${p.city} and how soon I could see it`)}
-      />
     </div>
   )
 }
@@ -870,7 +825,7 @@ function IdleCrossfade() {
   )
 }
 
-function RightPanel({ tab, properties, onSaveSearch }) {
+function RightPanel({ tab, properties, onSaveSearch, favIds, onToggleFavorite, sessionId, favoritesCount }) {
   const hasProps = properties.length > 0
   return (
     <div className="relative h-full overflow-hidden" style={{ background: NAVY }}>
@@ -885,7 +840,7 @@ function RightPanel({ tab, properties, onSaveSearch }) {
       {tab === 'concierge' && !hasProps && <IdleCrossfade />}
       {tab === 'concierge' && hasProps && (
         <div className="absolute inset-0 pt-16 pb-[92px]">
-          <PropertyShowcase properties={properties} />
+          <PropertyShowcase properties={properties} favIds={favIds} onToggleFavorite={onToggleFavorite} sessionId={sessionId} favoritesCount={favoritesCount} />
         </div>
       )}
 
@@ -1036,6 +991,7 @@ function App() {
   const [tab, setTab] = useState('concierge')
   const [isAdmin, setIsAdmin] = useState(false)
   const [heroShowcase, setHeroShowcase] = useState([])
+  const [favState, setFavState] = useState({ favIds: new Set(), toggleFavorite: () => {}, sessionId: null, favoritesCount: 0 })
   // Mobile toggle: 'chat' shows Hobson panel, 'properties' shows listings panel
   // On desktop (lg+) both are always visible side-by-side.
   const [mobileView, setMobileView] = useState('chat')
@@ -1060,21 +1016,21 @@ function App() {
     <div className="min-h-screen lg:h-screen flex flex-col overflow-y-auto lg:overflow-hidden" style={{ background: NAVY }}>
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
-        <div className="max-w-[1600px] mx-auto px-6 py-2 flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4">
           {/* LEFT: brand logos */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <img src={LOGOS.residential} alt="Anasa Collection" className="h-10 w-14 object-contain" />
-            <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-10 w-10 object-contain" />
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            <img src={LOGOS.residential} alt="Anasa Collection" className="h-8 w-11 sm:h-10 sm:w-14 object-contain" />
+            <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
             <span className="hidden xl:inline text-[#F5EDE0] text-xl ml-2" style={{ fontFamily: SERIF, fontWeight: 500 }}>VantaSure Realty</span>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
             <TabsList className="bg-transparent border border-[#D4AF37]/25 h-8">
-              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
-                <Sparkles className="h-3 w-3 mr-1" />Concierge
+              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
+                <Sparkles className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">Concierge</span>
               </TabsTrigger>
-              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
-                <MapIcon className="h-3 w-3 mr-1" />Map
+              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
+                <MapIcon className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">Map</span>
               </TabsTrigger>
               {isAdmin && (
                 <TabsTrigger value="admin" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
@@ -1098,7 +1054,7 @@ function App() {
           </section>
         </main>
       ) : (
-        <main className="flex-1 grid grid-cols-1 grid-rows-[auto_1fr] lg:grid-cols-[1fr_1px_1fr] lg:grid-rows-none lg:overflow-hidden relative">
+        <main className="flex-1 grid grid-cols-1 grid-rows-[auto_1fr] lg:grid-cols-[440px_1px_1fr] lg:grid-rows-none lg:overflow-hidden relative">
           {/* Mobile-only toggle: swap between Hobson chat and Properties */}
           <div className="lg:hidden flex-shrink-0 flex items-center justify-center gap-1 px-4 pt-2 pb-1 border-b border-[#D4AF37]/15" style={{ background: NAVY }}>
             <div className="inline-flex items-center rounded-full border border-[#D4AF37]/30 p-0.5">
@@ -1118,13 +1074,13 @@ function App() {
           </div>
           {/* LEFT panel — chat/hobson (visible on desktop always, on mobile only when 'chat' selected) */}
           <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:block min-h-0`}>
-            <ChatPanel onProperties={setHeroShowcase} />
+            <ChatPanel onProperties={setHeroShowcase} onFavoritesChange={setFavState} />
           </div>
           {/* Gold vertical divider */}
           <div className="hidden lg:block w-px" style={{ background: `linear-gradient(to bottom, transparent 0%, ${GOLD} 8%, ${GOLD} 92%, transparent 100%)` }} />
           {/* RIGHT panel — properties (visible on desktop always, on mobile only when 'properties' selected) */}
           <div className={`${mobileView === 'properties' ? 'block' : 'hidden'} lg:block min-h-0`}>
-            <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} />
+            <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} favIds={favState.favIds} onToggleFavorite={favState.toggleFavorite} sessionId={favState.sessionId} favoritesCount={favState.favoritesCount} />
           </div>
         </main>
       )}

@@ -1,5 +1,18 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+
+// Renders children at document.body instead of in place. Needed because these
+// cards have a CSS animation that ends on a non-'none' transform (dealIn's
+// 100% keyframe), and any ancestor with an active transform creates a new
+// containing block for position:fixed descendants — without this, "fixed"
+// modals get trapped inside the card's own box instead of covering the screen.
+function BodyPortal({ children }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  if (!mounted) return null
+  return createPortal(children, document.body)
+}
 
 // Luxury idle imagery — rotates every 5s when no property recs are active
 const IDLE_IMAGES = [
@@ -29,11 +42,13 @@ function statusPill(p) {
   return 'New Listing'
 }
 
-function PropertyCard({ p, index = 0 }) {
+function PropertyCard({ p, index = 0, isFavorite = false, onToggleFavorite }) {
   const [showContact, setShowContact] = useState(false)
+  const [showDetail, setShowDetail] = useState(false)
   return (
     <div
       className="card group relative rounded-[14px] overflow-hidden cursor-pointer transition-all duration-500"
+      onClick={() => setShowDetail(true)}
       style={{
         background: '#101D33',
         boxShadow: '0 18px 45px rgba(0, 0, 0, .45)',
@@ -50,6 +65,19 @@ function PropertyCard({ p, index = 0 }) {
           style={{ filter: 'brightness(.92)' }}
           loading="lazy"
         />
+        {onToggleFavorite && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(p.id) }}
+            aria-label={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+            title={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+            className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full flex items-center justify-center bg-[#0A1628]/70 hover:bg-[#0A1628]/90 backdrop-blur-sm border border-[#D4AF37]/30 transition"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill={isFavorite ? '#D4AF37' : 'none'} stroke="#D4AF37" strokeWidth="1.8">
+              <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Gold hairline divider */}
@@ -113,37 +141,191 @@ function PropertyCard({ p, index = 0 }) {
 
       {/* Virtual staging contact card — placeholder until the real staging build ships */}
       {showContact && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
-          style={{ background: 'rgba(10, 22, 40, 0.75)' }}
-          onClick={(e) => { e.stopPropagation(); setShowContact(false) }}
-        >
+        <BodyPortal>
           <div
-            className="max-w-sm w-full rounded-xl border border-[#D4AF37]/30 p-6 text-center"
-            style={{ background: '#0B1526' }}
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+            style={{ background: 'rgba(10, 22, 40, 0.75)' }}
+            onClick={(e) => { e.stopPropagation(); setShowContact(false) }}
           >
-            <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] mb-3">Virtual Staging</div>
-            <p className="text-[#F5EDE0] text-sm leading-relaxed mb-5">
-              Interested in seeing this home fully designed and furnished? Reach out directly and we'll take care of it.
-            </p>
-            <div className="text-[#F5EDE0] font-medium">Paul Schafranick</div>
-            <a href="tel:+15612557285" className="text-[#D4AF37] text-lg font-semibold block mt-1 hover:brightness-110">561-255-7285</a>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowContact(false) }}
-              className="mt-5 text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+            <div
+              className="max-w-sm w-full rounded-xl border border-[#D4AF37]/30 p-6 text-center"
+              style={{ background: '#0B1526' }}
+              onClick={(e) => e.stopPropagation()}
             >
-              Close
-            </button>
+              <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] mb-3">Virtual Staging</div>
+              <p className="text-[#F5EDE0] text-sm leading-relaxed mb-5">
+                Interested in seeing this home fully designed and furnished? Reach out directly and we'll take care of it.
+              </p>
+              <div className="text-[#F5EDE0] font-medium">Paul Schafranick</div>
+              <a href="tel:+15612557285" className="text-[#D4AF37] text-lg font-semibold block mt-1 hover:brightness-110">561-255-7285</a>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowContact(false) }}
+                className="mt-5 text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
-        </div>
+        </BodyPortal>
+      )}
+
+      {showDetail && (
+        <BodyPortal>
+          <PropertyDetailModal p={p} index={index} onClose={() => setShowDetail(false)} />
+        </BodyPortal>
       )}
     </div>
   )
 }
 
-export default function PropertyShowcase({ properties = [] }) {
+function PropertyDetailModal({ p, index = 0, onClose }) {
+  const gallery = (p.images && p.images.length ? p.images : [p.heroImage || p.image]).filter(Boolean)
+  const photos = gallery.length ? gallery : [IDLE_IMAGES[index % IDLE_IMAGES.length]]
+  const [photoIdx, setPhotoIdx] = useState(0)
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowRight') setPhotoIdx(i => (i + 1) % photos.length)
+      if (e.key === 'ArrowLeft') setPhotoIdx(i => (i - 1 + photos.length) % photos.length)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [photos.length, onClose])
+
+  const specs = [
+    { label: 'Beds', value: p.beds || '—' },
+    { label: 'Baths', value: p.baths || '—' },
+    { label: 'SqFt', value: p.sqft ? p.sqft.toLocaleString() : '—' },
+    { label: 'Year Built', value: p.yearBuilt || '—' },
+    { label: 'Lot', value: p.lotAcres ? `${p.lotAcres} ac` : '—' }
+  ].filter(s => s.value !== '—' || ['Beds', 'Baths', 'SqFt'].includes(s.label))
+
+  const isCommercial = p.type === 'commercial'
+  const agentLine = [p.agent, p.office].filter(Boolean).join(' · ')
+
+  return (
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6"
+      style={{ background: 'rgba(6, 13, 24, 0.85)' }}
+      onClick={(e) => { e.stopPropagation(); onClose() }}
+    >
+      <div
+        className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl border border-[#D4AF37]/30 hobson-scroll"
+        style={{ background: '#0B1526' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Gallery */}
+        <div className="relative" style={{ aspectRatio: '16/9', background: '#101D33' }}>
+          <img
+            src={photos[photoIdx]}
+            alt={p.address || p.title || 'Property'}
+            className="w-full h-full object-cover"
+          />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClose() }}
+            className="absolute top-3 right-3 h-9 w-9 rounded-full flex items-center justify-center bg-[#0A1628]/80 hover:bg-[#0A1628] border border-[#D4AF37]/40 text-[#D4AF37] backdrop-blur-sm transition"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => (i - 1 + photos.length) % photos.length) }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full flex items-center justify-center bg-[#0A1628]/70 hover:bg-[#0A1628] border border-[#D4AF37]/30 text-[#D4AF37] backdrop-blur-sm transition"
+                aria-label="Previous photo"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => (i + 1) % photos.length) }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full flex items-center justify-center bg-[#0A1628]/70 hover:bg-[#0A1628] border border-[#D4AF37]/30 text-[#D4AF37] backdrop-blur-sm transition"
+                aria-label="Next photo"
+              >
+                ›
+              </button>
+              <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-[#0A1628]/80 border border-[#D4AF37]/30 text-[#D4AF37] text-[10px] uppercase tracking-widest backdrop-blur-sm">
+                {photoIdx + 1} / {photos.length}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="px-6 sm:px-8 py-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div
+                className="text-[#C9A227] leading-none"
+                style={{ fontFamily: '"Cormorant Garamond", "Playfair Display", Georgia, serif', fontWeight: 600, fontSize: '2.25rem' }}
+              >
+                {fullMoney(p.price)}
+              </div>
+              <div className="text-[#EDF1F7] text-sm mt-2">
+                {p.address || `Address available upon request · ${p.city || 'Palm Beach County'}, ${p.state || 'FL'}`}
+              </div>
+            </div>
+            <span className="text-[10px] uppercase tracking-[0.25em] text-[#C9A227] border border-[#D4AF37]/30 rounded-full px-3 py-1.5 whitespace-nowrap">
+              {statusPill(p)}
+            </span>
+          </div>
+
+          {/* Specs */}
+          <div className="flex flex-wrap gap-x-6 gap-y-2 mt-5 pt-5 border-t border-[#D4AF37]/15 text-[0.8rem] text-[#95A3B8]">
+            {specs.map(s => (
+              <span key={s.label}>
+                <b className="text-[#EDF1F7] font-medium">{s.value}</b>&nbsp;{s.label}
+              </span>
+            ))}
+            {isCommercial && p.capRate != null && (
+              <span><b className="text-[#EDF1F7] font-medium">{p.capRate}%</b>&nbsp;Cap Rate</span>
+            )}
+            {isCommercial && p.zoning && (
+              <span><b className="text-[#EDF1F7] font-medium">{p.zoning}</b>&nbsp;Zoning</span>
+            )}
+          </div>
+
+          {/* Description */}
+          {p.description && (
+            <p className="text-[#C8CCD1] text-sm leading-relaxed mt-5">{p.description}</p>
+          )}
+
+          {/* Amenities */}
+          {Array.isArray(p.amenities) && p.amenities.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-5">
+              {p.amenities.map(a => (
+                <span key={a} className="text-[10px] uppercase tracking-wider text-[#D4AF37]/80 border border-[#D4AF37]/25 rounded-full px-2.5 py-1">
+                  {a}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Contact */}
+          <div className="mt-6 pt-5 border-t border-[#D4AF37]/15 flex items-center justify-between flex-wrap gap-3">
+            <div className="text-[#95A3B8] text-xs">
+              {agentLine || 'Listed by Paul Schafranick'}
+            </div>
+            <a
+              href="tel:+15612557285"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
+              style={{ background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)', border: '1px solid #8a6b2a' }}
+            >
+              Contact Paul · 561-255-7285
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function PropertyShowcase({ properties = [], favIds, onToggleFavorite, sessionId, favoritesCount = 0 }) {
   const [imgIdx, setImgIdx] = useState(0)
   const hasProps = properties.length > 0
   const shown = properties.slice(0, 4)
@@ -197,6 +379,17 @@ export default function PropertyShowcase({ properties = [] }) {
                 : 'Awaiting Criteria'}
             </div>
           </div>
+          {sessionId && favoritesCount > 0 && (
+            <a
+              href={`/shortlist/${sessionId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37] hover:text-[#E6C878] transition"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#D4AF37" stroke="#D4AF37" strokeWidth="1.5"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+              {favoritesCount} Saved →
+            </a>
+          )}
         </div>
       </div>
 
@@ -240,9 +433,9 @@ export default function PropertyShowcase({ properties = [] }) {
               scrollbarWidth: 'thin'
             }}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pt-2">
               {properties.map((p, i) => (
-                <PropertyCard key={p.id || p.listingId || i} p={p} index={i} />
+                <PropertyCard key={p.id || p.listingId || i} p={p} index={i} isFavorite={favIds ? favIds.has(p.id) : false} onToggleFavorite={onToggleFavorite} />
               ))}
             </div>
           </div>
