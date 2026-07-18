@@ -703,12 +703,13 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </div>
       </div>
 
-      {/* Hobson avatar / HeyGen video slot — compact, secondary to search in this layout.
+      {/* Hobson avatar / HeyGen video slot — compact, secondary to search in this layout,
+          and hidden entirely on mobile (screen space there goes to search + results,
+          not a video — per explicit direction in the 2026-07-18 redesign conversation).
           NOTE: this intentionally overrides the previous "locked" 75%-width rule from the
-          old 50/50 split layout (per explicit direction across the 2026-07-18 redesign
-          conversation — search is now primary, Hobson is a smaller companion panel). If
-          reverting to a wide single chat+video column, re-apply w-[75%] there, not here. */}
-      <div className="px-5 pb-3 flex-shrink-0 flex justify-center">
+          old 50/50 split layout. If reverting to a wide single chat+video column, re-apply
+          w-[75%] there, not here. */}
+      <div className="hidden lg:flex px-5 pb-3 flex-shrink-0 justify-center">
         <div className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-full aspect-[16/9]" style={{ background: '#0B1526' }}>
           {/* HeyGen recorded avatar — autoplays on loop, muted (browser policy). */}
           <video
@@ -1007,21 +1008,21 @@ function App() {
     <div className="min-h-screen lg:h-screen flex flex-col overflow-y-auto lg:overflow-hidden" style={{ background: NAVY }}>
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
-        <div className="max-w-[1600px] mx-auto px-6 py-2 flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4">
           {/* LEFT: brand logos */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <img src={LOGOS.residential} alt="Anasa Collection" className="h-10 w-14 object-contain" />
-            <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-10 w-10 object-contain" />
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            <img src={LOGOS.residential} alt="Anasa Collection" className="h-8 w-11 sm:h-10 sm:w-14 object-contain" />
+            <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
             <span className="hidden xl:inline text-[#F5EDE0] text-xl ml-2" style={{ fontFamily: SERIF, fontWeight: 500 }}>VantaSure Realty</span>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
             <TabsList className="bg-transparent border border-[#D4AF37]/25 h-8">
-              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
-                <Sparkles className="h-3 w-3 mr-1" />Concierge
+              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
+                <Sparkles className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">Concierge</span>
               </TabsTrigger>
-              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
-                <MapIcon className="h-3 w-3 mr-1" />Map
+              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
+                <MapIcon className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">Map</span>
               </TabsTrigger>
               {isAdmin && (
                 <TabsTrigger value="admin" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-3">
