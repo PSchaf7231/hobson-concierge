@@ -409,7 +409,7 @@ export default function PropertyShowcase({ properties = [] }) {
               scrollbarWidth: 'thin'
             }}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pt-2">
               {properties.map((p, i) => (
                 <PropertyCard key={p.id || p.listingId || i} p={p} index={i} />
               ))}
