@@ -30,6 +30,7 @@ function statusPill(p) {
 }
 
 function PropertyCard({ p, index = 0 }) {
+  const [showContact, setShowContact] = useState(false)
   return (
     <div
       className="card group relative rounded-[14px] overflow-hidden cursor-pointer transition-all duration-500"
@@ -49,17 +50,6 @@ function PropertyCard({ p, index = 0 }) {
           style={{ filter: 'brightness(.92)' }}
           loading="lazy"
         />
-        {/* Status pill top-left */}
-        <span
-          className="absolute top-3.5 left-3.5 text-[#EDF1F7] text-[10px] uppercase font-medium px-3 py-1.5 rounded-full backdrop-blur-md"
-          style={{
-            letterSpacing: '0.22em',
-            background: 'rgba(11, 21, 38, 0.72)',
-            border: '1px solid rgba(255, 255, 255, 0.12)'
-          }}
-        >
-          {statusPill(p)}
-        </span>
       </div>
 
       {/* Gold hairline divider */}
@@ -114,12 +104,41 @@ function PropertyCard({ p, index = 0 }) {
       {/* Design this home CTA — subtle bottom strip */}
       <button
         type="button"
-        className="w-full py-2 text-[10px] uppercase tracking-[0.28em] text-[#C9A227] transition-colors font-medium border-t"
+        onClick={(e) => { e.stopPropagation(); setShowContact(true) }}
+        className="w-full py-2 text-[10px] uppercase tracking-[0.28em] text-[#C9A227] hover:bg-[#C9A227]/10 transition-colors font-medium border-t"
         style={{ background: 'rgba(11, 21, 38, 0.5)', borderColor: 'rgba(201, 162, 39, 0.15)' }}
-        title="Virtual staging (coming soon)"
       >
         Design this home →
       </button>
+
+      {/* Virtual staging contact card — placeholder until the real staging build ships */}
+      {showContact && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+          style={{ background: 'rgba(10, 22, 40, 0.75)' }}
+          onClick={(e) => { e.stopPropagation(); setShowContact(false) }}
+        >
+          <div
+            className="max-w-sm w-full rounded-xl border border-[#D4AF37]/30 p-6 text-center"
+            style={{ background: '#0B1526' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] mb-3">Virtual Staging</div>
+            <p className="text-[#F5EDE0] text-sm leading-relaxed mb-5">
+              Interested in seeing this home fully designed and furnished? Reach out directly and we'll take care of it.
+            </p>
+            <div className="text-[#F5EDE0] font-medium">Paul Schafranick</div>
+            <a href="tel:+15612557285" className="text-[#D4AF37] text-lg font-semibold block mt-1 hover:brightness-110">561-255-7285</a>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowContact(false) }}
+              className="mt-5 text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -213,15 +232,15 @@ export default function PropertyShowcase({ properties = [] }) {
       {hasProps && (
         <div className="relative pb-8">
           <div
-            className="mx-auto overflow-y-auto scroll-smooth px-2"
+            className="mx-auto overflow-y-auto scroll-smooth px-2 hobson-scroll"
             style={{
-              width: '92%',
-              maxWidth: '920px',
-              maxHeight: '640px',
+              width: '98%',
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 200px)',
               scrollbarWidth: 'thin'
             }}
           >
-            <div className="grid grid-cols-2 gap-6 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
               {properties.map((p, i) => (
                 <PropertyCard key={p.id || p.listingId || i} p={p} index={i} />
               ))}

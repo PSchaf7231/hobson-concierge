@@ -187,6 +187,7 @@ function InlineLeadCapture() {
   const [phone, setPhone] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -232,14 +233,78 @@ function InlineLeadCapture() {
   const inputCls = "h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:bg-[#D4AF37]/15 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-[11px] px-2.5 transition"
 
   return (
-    <div className="flex items-center gap-1.5 flex-shrink-0">
-      <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-24`} />
-      <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-24`} />
-      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-36`} />
-      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-36`} />
-      <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition">
-        {busy ? '…' : 'Save'}
+    <>
+      {/* Desktop / tablet: inline 4-field capture bar */}
+      <div className="hidden lg:flex items-center gap-1.5 flex-shrink-0">
+        <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-24`} />
+        <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-24`} />
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-36`} />
+        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-36`} />
+        <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition">
+          {busy ? '…' : 'Save'}
+        </button>
+      </div>
+      {/* Mobile: compact "Save" button that opens the modal */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition flex-shrink-0"
+      >
+        Save Search
       </button>
+      <LeadCaptureModal
+        open={mobileOpen}
+        onOpenChange={setMobileOpen}
+        sessionId={typeof window !== 'undefined' ? localStorage.getItem('atlas_session') : null}
+        onCaptured={() => {
+          try { localStorage.setItem('atlas_lead_captured', '1'); localStorage.setItem('atlas_lead_name', firstName.trim()) } catch (e) {}
+          setDone(true)
+          setMobileOpen(false)
+        }}
+      />
+    </>
+  )
+}
+
+// ==========================================================================
+// Compact custom dropdown — inline scrollable options, stays within panel.
+// Native <select> popups escape the panel and can render off-screen.
+// This version keeps everything inside the overlay's bounds.
+// ==========================================================================
+function CompactSelect({ value, onChange, options, placeholder = 'Any', className = '' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+  const selected = options.find(o => o.value === value)
+  const label = selected ? selected.label : placeholder
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5 text-left flex items-center justify-between transition"
+      >
+        <span className={value ? '' : 'text-[#F5EDE0]/50'}>{label}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 max-h-36 overflow-y-auto rounded border border-[#D4AF37]/50 bg-[#0A1628] z-50 shadow-2xl hobson-scroll">
+          {options.map(o => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => { onChange(o.value); setOpen(false) }}
+              className={`block w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-[#D4AF37]/25 transition ${o.value === value ? 'bg-[#D4AF37]/30 text-[#F5EDE0]' : 'text-[#F5EDE0]/85'}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -446,6 +511,90 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
     onProperties && onProperties([])
   }
 
+  // Search Criteria plate — collapsible filter panel between video and chat box
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [moreFilters, setMoreFilters] = useState(false)
+  const [filters, setFilters] = useState({
+    location: '',
+    propertyType: '',
+    priceMin: '',
+    priceMax: '',
+    beds: '',
+    baths: '',
+    status: 'Active',
+    sqftMin: '',
+    yearBuiltMin: '',
+    garage: '',
+    pool: '',
+    waterfront: '',
+    hoaMax: '',
+    view: ''
+  })
+  function runSearch() {
+    const f = filters
+    const parts = []
+    if (f.location) parts.push(`in ${f.location}`)
+    if (f.propertyType) parts.push(f.propertyType.toLowerCase())
+    if (f.priceMin || f.priceMax) {
+      // The chat backend's budget parser only recognizes "$Xk"/"$XM" shorthand
+      // (no thousands-comma numbers) and derives a single multiplier from
+      // whichever unit is on the LAST number in a range, applying it to both
+      // ends — so both ends must share one unit. It also can't parse "k" on
+      // the first number of a range (only "m"/"million"/"mm" work there), so
+      // for the "k" case the min is left bare, e.g. "$300 to $750k".
+      const fmtM = (v) => parseFloat((v / 1_000_000).toFixed(2))
+      const fmtK = (v) => Math.round(v / 1000)
+      if (f.priceMin && f.priceMax) {
+        const min = Number(f.priceMin), max = Number(f.priceMax)
+        if (max >= 1_000_000 || min >= 1_000_000) {
+          parts.push(`priced $${fmtM(min)}M to $${fmtM(max)}M`)
+        } else {
+          parts.push(`priced $${fmtK(min)} to $${fmtK(max)}k`)
+        }
+      } else if (f.priceMin) {
+        const v = Number(f.priceMin)
+        parts.push(`priced over ${v >= 1_000_000 ? `$${fmtM(v)}M` : `$${fmtK(v)}k`}`)
+      } else {
+        const v = Number(f.priceMax)
+        parts.push(`priced under ${v >= 1_000_000 ? `$${fmtM(v)}M` : `$${fmtK(v)}k`}`)
+      }
+    }
+    if (f.beds && f.beds !== 'Any') parts.push(`${f.beds} beds`)
+    if (f.baths && f.baths !== 'Any') parts.push(`${f.baths} baths`)
+    if (f.sqftMin) parts.push(`min ${f.sqftMin} sqft`)
+    if (f.yearBuiltMin) parts.push(`built ${f.yearBuiltMin}`)
+    if (f.garage) parts.push(`${f.garage} garage`)
+    if (f.pool && f.pool !== 'Any') parts.push(f.pool === 'Yes' ? 'with a private pool' : 'no pool')
+    if (f.waterfront === 'Yes') parts.push('waterfront')
+    if (f.hoaMax) parts.push(`HOA under ${f.hoaMax}`)
+    if (f.view) parts.push(`${f.view.toLowerCase()}`)
+    if (f.status && f.status !== 'Active') parts.push(`status ${f.status.toLowerCase()}`)
+    const q = parts.length ? `Show me properties ${parts.join(', ')}.` : 'Show me the full Palm Beach County inventory, any price.'
+    setSearchOpen(false)
+    setMoreFilters(false)
+    send(q)
+  }
+  // Option lists
+  const PRICE_OPTS = [
+    { value: '', label: 'Any' },
+    { value: '100000', label: '$100k' }, { value: '200000', label: '$200k' }, { value: '300000', label: '$300k' },
+    { value: '400000', label: '$400k' }, { value: '500000', label: '$500k' }, { value: '600000', label: '$600k' },
+    { value: '750000', label: '$750k' }, { value: '1000000', label: '$1M' }, { value: '1500000', label: '$1.5M' },
+    { value: '2000000', label: '$2M' }, { value: '3000000', label: '$3M' }, { value: '5000000', label: '$5M' },
+    { value: '7500000', label: '$7.5M' }, { value: '10000000', label: '$10M' }, { value: '20000000', label: '$20M+' }
+  ]
+  const BED_OPTS = [{value:'',label:'Any'},{value:'1+',label:'1+'},{value:'2+',label:'2+'},{value:'3+',label:'3+'},{value:'4+',label:'4+'},{value:'5+',label:'5+'},{value:'6+',label:'6+'}]
+  const BATH_OPTS = [{value:'',label:'Any'},{value:'1+',label:'1+'},{value:'1.5+',label:'1.5+'},{value:'2+',label:'2+'},{value:'3+',label:'3+'},{value:'4+',label:'4+'},{value:'5+',label:'5+'}]
+  const PROPTYPE_OPTS = [{value:'',label:'Any'},{value:'Single Family',label:'Single Family'},{value:'Condo',label:'Condo'},{value:'Townhouse',label:'Townhouse'},{value:'Multi-Family',label:'Multi-Family'},{value:'Land',label:'Land'}]
+  const STATUS_OPTS = [{value:'Active',label:'Active'},{value:'Pending',label:'Pending'},{value:'Sold',label:'Sold'}]
+  const SQFT_OPTS = [{value:'',label:'Any'},{value:'1000',label:'1k+'},{value:'1500',label:'1.5k+'},{value:'2000',label:'2k+'},{value:'2500',label:'2.5k+'},{value:'3000',label:'3k+'},{value:'4000',label:'4k+'},{value:'5000',label:'5k+'}]
+  const YEAR_OPTS = [{value:'',label:'Any'},{value:'2020+',label:'2020+'},{value:'2010+',label:'2010+'},{value:'2000+',label:'2000+'},{value:'1990+',label:'1990+'},{value:'1980+',label:'1980+'}]
+  const GARAGE_OPTS = [{value:'',label:'Any'},{value:'1+',label:'1+'},{value:'2+',label:'2+'},{value:'3+',label:'3+'},{value:'4+',label:'4+'}]
+  const POOL_OPTS = [{value:'',label:'Any'},{value:'Yes',label:'Yes (Private)'},{value:'No',label:'No'}]
+  const WATER_OPTS = [{value:'',label:'Any'},{value:'Yes',label:'Yes'},{value:'No',label:'No'}]
+  const HOA_OPTS = [{value:'',label:'Any'},{value:'$100/mo',label:'$100/mo'},{value:'$200/mo',label:'$200/mo'},{value:'$500/mo',label:'$500/mo'},{value:'$1000/mo',label:'$1k/mo'}]
+  const VIEW_OPTS = [{value:'',label:'Any'},{value:'Ocean View',label:'Ocean View'},{value:'Canal/Water View',label:'Canal/Water View'},{value:'Golf Course View',label:'Golf Course View'},{value:'Garden View',label:'Garden View'}]
+
   const suggestions = persona === 'residential'
     ? ['Waterfront estate in Boca, $4–6M', 'New construction, Delray Beach', 'Golf course view, Wellington']
     : ['Stabilized MOB near hospital, 7%+ cap', 'Class A office, Palm Beach County', 'ASC with NNN lease, 8%+ cap']
@@ -480,7 +629,7 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
              padding = px-6 pb-6
          Any adjustment here regresses the Concierge window and MUST be re-approved. */}
       <div className="px-6 pt-3 pb-6 flex-shrink-0 flex justify-center">
-        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-[75%] aspect-[16/9]" style={{ background: '#0B1526' }}>
+        <div data-locked-layout="hobson-avatar-75-16by9" className="relative rounded-lg overflow-hidden border border-[#D4AF37]/25 shadow-xl w-full lg:w-[75%] aspect-[16/9]" style={{ background: '#0B1526' }}>
           {/* HeyGen recorded avatar — autoplays on loop, muted (browser policy). */}
           <video
             ref={(el) => { if (el) window.__hobsonVideo = el }}
@@ -514,10 +663,136 @@ function ChatPanel({ onProperties, onViewCountUpdate }) {
         </div>
       </div>
 
+      {/* Search Criteria — gold pill + overlay filter panel (does NOT push chat down) */}
+      <div className="relative flex-shrink-0 px-6 pb-1 flex justify-center z-30">
+        <button
+          type="button"
+          onClick={() => setSearchOpen(v => !v)}
+          className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full text-[10px] uppercase tracking-[0.32em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
+          style={{
+            background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)',
+            border: '1px solid #8a6b2a',
+            boxShadow: '0 2px 8px rgba(201, 162, 39, 0.35), inset 0 1px 0 rgba(255,255,255,0.35)'
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          Search Criteria
+          {recommended.length > 0 && <span className="text-[9px] normal-case tracking-normal opacity-80">· {recommended.length} shown</span>}
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ transform: searchOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        {searchOpen && (
+          <div className="fixed inset-x-2 top-14 bottom-4 lg:absolute lg:inset-auto lg:top-full lg:left-6 lg:right-6 lg:bottom-auto lg:mt-2 lg:max-h-[52vh] rounded-xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md p-4 z-50 overflow-y-auto hobson-scroll"
+               style={{ background: 'linear-gradient(to bottom, rgba(10,22,40,0.98), rgba(11,21,38,0.98))' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold">Primary Filters</div>
+              <button onClick={() => setSearchOpen(false)} className="text-[#F5EDE0]/50 hover:text-[#F5EDE0] text-xs">✕</button>
+            </div>
+
+            {/* PRIMARY ROW — 6 fields + More Filters + Search */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr] gap-2">
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Location</label>
+                <input value={filters.location} onChange={e => setFilters(f => ({...f, location: e.target.value}))} placeholder="City, Zip, or Neighborhood" className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5" />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Property Type</label>
+                <CompactSelect value={filters.propertyType} onChange={v => setFilters(f => ({...f, propertyType: v}))} options={PROPTYPE_OPTS} />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Min Price</label>
+                <CompactSelect value={filters.priceMin} onChange={v => setFilters(f => ({...f, priceMin: v}))} options={PRICE_OPTS} />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Max Price</label>
+                <CompactSelect value={filters.priceMax} onChange={v => setFilters(f => ({...f, priceMax: v}))} options={PRICE_OPTS} />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Bedrooms</label>
+                <CompactSelect value={filters.beds} onChange={v => setFilters(f => ({...f, beds: v}))} options={BED_OPTS} />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Bathrooms</label>
+                <CompactSelect value={filters.baths} onChange={v => setFilters(f => ({...f, baths: v}))} options={BATH_OPTS} />
+              </div>
+            </div>
+
+            {/* More Filters toggle + Search actions */}
+            <div className="flex items-center justify-between mt-4">
+              <button
+                type="button"
+                onClick={() => setMoreFilters(v => !v)}
+                className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37] hover:text-[#E6C878] transition"
+              >
+                {moreFilters ? '− Fewer Filters' : '+ More Filters'}
+              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFilters({ location:'', propertyType:'', priceMin:'', priceMax:'', beds:'', baths:'', status:'Active', sqftMin:'', yearBuiltMin:'', garage:'', pool:'', waterfront:'', hoaMax:'', view:'' })}
+                  className="text-[10px] uppercase tracking-[0.22em] text-[#F5EDE0]/50 hover:text-[#F5EDE0]/80 transition"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={runSearch}
+                  className="px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
+                  style={{ background: 'linear-gradient(to bottom, #E6C878 0%, #C9A227 55%, #A88418 100%)', border: '1px solid #8a6b2a' }}
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+
+            {/* SECONDARY TRAY — appears only when More Filters is clicked */}
+            {moreFilters && (
+              <div className="mt-4 pt-4 border-t border-[#D4AF37]/20">
+                <div className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37] font-semibold mb-3">More Filters</div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Property Status</label>
+                    <CompactSelect value={filters.status} onChange={v => setFilters(f => ({...f, status: v}))} options={STATUS_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Sqft (min)</label>
+                    <CompactSelect value={filters.sqftMin} onChange={v => setFilters(f => ({...f, sqftMin: v}))} options={SQFT_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Year Built (min)</label>
+                    <CompactSelect value={filters.yearBuiltMin} onChange={v => setFilters(f => ({...f, yearBuiltMin: v}))} options={YEAR_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Garage Spaces</label>
+                    <CompactSelect value={filters.garage} onChange={v => setFilters(f => ({...f, garage: v}))} options={GARAGE_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Pool</label>
+                    <CompactSelect value={filters.pool} onChange={v => setFilters(f => ({...f, pool: v}))} options={POOL_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">Waterfront</label>
+                    <CompactSelect value={filters.waterfront} onChange={v => setFilters(f => ({...f, waterfront: v}))} options={WATER_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">HOA Fees (max)</label>
+                    <CompactSelect value={filters.hoaMax} onChange={v => setFilters(f => ({...f, hoaMax: v}))} options={HOA_OPTS} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-[#D4AF37]/70 block mb-1">View</label>
+                    <CompactSelect value={filters.view} onChange={v => setFilters(f => ({...f, view: v}))} options={VIEW_OPTS} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Middle + Bottom UNIFIED: one chat box containing scrollable history AND input.
           Width matches Hobson video (75%), centered, fills the remaining vertical space. */}
       <div className="flex-1 min-h-0 px-6 pt-3 pb-6 flex justify-center">
-        <div className="w-[75%] flex flex-col min-h-0 rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg overflow-hidden">
+        <div className="w-full lg:w-[75%] flex flex-col min-h-0 rounded-2xl border border-[#D4AF37]/30 bg-[#0B1526]/70 shadow-lg overflow-hidden">
           {/* Scrollable message history — scrollbar is INSIDE this box */}
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4 hobson-scroll">
             {messages.map((m, i) => (
@@ -761,6 +1036,9 @@ function App() {
   const [tab, setTab] = useState('concierge')
   const [isAdmin, setIsAdmin] = useState(false)
   const [heroShowcase, setHeroShowcase] = useState([])
+  // Mobile toggle: 'chat' shows Hobson panel, 'properties' shows listings panel
+  // On desktop (lg+) both are always visible side-by-side.
+  const [mobileView, setMobileView] = useState('chat')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -769,12 +1047,17 @@ function App() {
     }
   }, [])
 
+  // Auto-switch to properties view on mobile when new listings arrive
+  useEffect(() => {
+    if (heroShowcase.length > 0) setMobileView('properties')
+  }, [heroShowcase])
+
   function triggerSaveSearch() {
     window.dispatchEvent(new CustomEvent('hobson:save-search'))
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: NAVY }}>
+    <div className="min-h-screen lg:h-screen flex flex-col overflow-y-auto lg:overflow-hidden" style={{ background: NAVY }}>
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
         <div className="max-w-[1600px] mx-auto px-6 py-2 flex items-center justify-between gap-4">
@@ -815,13 +1098,34 @@ function App() {
           </section>
         </main>
       ) : (
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] overflow-hidden">
-          {/* LEFT panel */}
-          <ChatPanel onProperties={setHeroShowcase} />
+        <main className="flex-1 grid grid-cols-1 grid-rows-[auto_1fr] lg:grid-cols-[1fr_1px_1fr] lg:grid-rows-none lg:overflow-hidden relative">
+          {/* Mobile-only toggle: swap between Hobson chat and Properties */}
+          <div className="lg:hidden flex-shrink-0 flex items-center justify-center gap-1 px-4 pt-2 pb-1 border-b border-[#D4AF37]/15" style={{ background: NAVY }}>
+            <div className="inline-flex items-center rounded-full border border-[#D4AF37]/30 p-0.5">
+              <button
+                onClick={() => setMobileView('chat')}
+                className={`text-[10px] uppercase tracking-[0.22em] px-3 py-1 rounded-full transition ${mobileView === 'chat' ? 'bg-[#D4AF37] text-[#0A1628] font-semibold' : 'text-[#D4AF37]/70'}`}
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => setMobileView('properties')}
+                className={`text-[10px] uppercase tracking-[0.22em] px-3 py-1 rounded-full transition ${mobileView === 'properties' ? 'bg-[#D4AF37] text-[#0A1628] font-semibold' : 'text-[#D4AF37]/70'}`}
+              >
+                Properties{heroShowcase.length > 0 ? ` · ${heroShowcase.length}` : ''}
+              </button>
+            </div>
+          </div>
+          {/* LEFT panel — chat/hobson (visible on desktop always, on mobile only when 'chat' selected) */}
+          <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:block min-h-0`}>
+            <ChatPanel onProperties={setHeroShowcase} />
+          </div>
           {/* Gold vertical divider */}
           <div className="hidden lg:block w-px" style={{ background: `linear-gradient(to bottom, transparent 0%, ${GOLD} 8%, ${GOLD} 92%, transparent 100%)` }} />
-          {/* RIGHT panel */}
-          <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} />
+          {/* RIGHT panel — properties (visible on desktop always, on mobile only when 'properties' selected) */}
+          <div className={`${mobileView === 'properties' ? 'block' : 'hidden'} lg:block min-h-0`}>
+            <RightPanel tab={tab} properties={heroShowcase} onSaveSearch={triggerSaveSearch} />
+          </div>
         </main>
       )}
 
