@@ -1098,7 +1098,7 @@ function App() {
           </section>
         </main>
       ) : (
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] lg:overflow-hidden relative">
+        <main className="flex-1 grid grid-cols-1 grid-rows-[auto_1fr] lg:grid-cols-[1fr_1px_1fr] lg:grid-rows-none lg:overflow-hidden relative">
           {/* Mobile-only toggle: swap between Hobson chat and Properties */}
           <div className="lg:hidden flex-shrink-0 flex items-center justify-center gap-1 px-4 pt-2 pb-1 border-b border-[#D4AF37]/15" style={{ background: NAVY }}>
             <div className="inline-flex items-center rounded-full border border-[#D4AF37]/30 p-0.5">
