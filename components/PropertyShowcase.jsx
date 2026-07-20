@@ -429,11 +429,11 @@ export default function PropertyShowcase({ properties = [], favIds, onToggleFavo
             style={{
               width: '98%',
               maxWidth: '100%',
-              maxHeight: 'calc(100vh - 140px)',
+              maxHeight: 'calc(100vh - 120px)',
               scrollbarWidth: 'thin'
             }}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
               {properties.map((p, i) => (
                 <PropertyCard key={p.id || p.listingId || i} p={p} index={i} isFavorite={favIds ? favIds.has(p.id) : false} onToggleFavorite={onToggleFavorite} />
               ))}
