@@ -333,6 +333,8 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   const [captureOpen, setCaptureOpen] = useState(false)
   const audioRef = useRef(null)
   const recognitionRef = useRef(null)
+  const wantListeningRef = useRef(false)
+  const finalTranscriptRef = useRef('')
   const scrollRef = useRef(null)
   const lastPlayedRef = useRef(null)
   const sendingRef = useRef(false)
@@ -376,6 +378,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
     lastPlayedRef.current = fingerprint
     ;(async () => {
       try {
+        wantListeningRef.current = false
         try { recognitionRef.current?.stop() } catch (e) {}
         setListening(false)
         const res = await fetch('/api/voice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: last.content }) })
@@ -390,6 +393,8 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
           setOrbSpeaking(false)
           setTimeout(() => {
             if (orbActive && recognitionRef.current) {
+              finalTranscriptRef.current = ''
+              wantListeningRef.current = true
               try { recognitionRef.current.start(); setListening(true) } catch (e) {}
             }
           }, 700)
@@ -405,33 +410,50 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) return
     const r = new SR()
-    r.continuous = false
+    r.continuous = true
     r.interimResults = true
     r.lang = 'en-US'
     r.onresult = (e) => {
-      let finalText = ''
+      // continuous mode re-delivers the whole session's results on every event —
+      // only walk the ones new since the last callback (e.resultIndex).
+      let finalNew = ''
       let interim = ''
-      for (let i = 0; i < e.results.length; i++) {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript
-        if (e.results[i].isFinal) finalText += t
+        if (e.results[i].isFinal) finalNew += t
         else interim += t
       }
-      setInput((finalText || interim).trim())
-      if (finalText && orbActive) {
-        const text = finalText.trim()
+      if (finalNew) finalTranscriptRef.current = (finalTranscriptRef.current + ' ' + finalNew).trim()
+      setInput((finalTranscriptRef.current + ' ' + interim).trim())
+      if (finalNew && orbActive) {
+        const text = finalTranscriptRef.current
+        finalTranscriptRef.current = ''
         if (text.length > 1 && !sendingRef.current) {
           sendingRef.current = true
           setInput('')
+          // One turn per utterance in hands-free orb mode — stop here, the
+          // TTS-reply effect explicitly restarts listening for the next turn.
+          wantListeningRef.current = false
+          try { r.stop() } catch (e) {}
           send(text).finally(() => { sendingRef.current = false })
         }
       }
     }
-    r.onend = () => setListening(false)
-    r.onerror = (e) => {
+    r.onend = () => {
+      // Chrome/Edge end the session on their own after a silence timeout even
+      // in continuous mode — if the user didn't ask us to stop, just restart.
+      if (wantListeningRef.current) {
+        try { r.start(); return } catch (e) {}
+      }
       setListening(false)
+    }
+    r.onerror = (e) => {
       if (e?.error === 'audio-capture' || e?.error === 'not-allowed' || e?.error === 'aborted') {
+        wantListeningRef.current = false
+        setListening(false)
         recognitionRef.current = null
       }
+      // Other transient errors (e.g. 'no-speech'): let onend decide whether to restart.
     }
     recognitionRef.current = r
   }, [orbActive])
@@ -439,9 +461,11 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   async function toggleMic() {
     const r = recognitionRef.current
     if (!r) { alert('Voice input requires Chrome or Edge browser.'); return }
-    if (listening) { try { r.stop() } catch (e) {} ; setListening(false); return }
+    if (listening) { wantListeningRef.current = false; try { r.stop() } catch (e) {} ; setListening(false); return }
     setInput('')
-    try { r.start(); setListening(true) } catch (e) { alert('Could not start microphone. ' + e.message) }
+    finalTranscriptRef.current = ''
+    wantListeningRef.current = true
+    try { r.start(); setListening(true) } catch (e) { wantListeningRef.current = false; alert('Could not start microphone. ' + e.message) }
   }
 
   async function playVoice(text, idx) {
