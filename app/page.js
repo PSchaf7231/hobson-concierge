@@ -833,7 +833,7 @@ function RightPanel({ tab, properties, onSaveSearch, favIds, onToggleFavorite, s
       {/* MAP MODE */}
       {tab === 'map' && (
         <div className="absolute inset-0 pb-[92px]">
-          <MapPanel />
+          <MapPanel properties={properties} />
         </div>
       )}
 
@@ -851,22 +851,18 @@ function RightPanel({ tab, properties, onSaveSearch, favIds, onToggleFavorite, s
   )
 }
 
-function MapPanel() {
-  const [props, setProps] = useState([])
-  const [loading, setLoading] = useState(true)
-  useEffect(() => {
-    fetch('/api/properties').then(r => r.json()).then(d => { setProps(Array.isArray(d) ? d : []); setLoading(false) })
-  }, [])
+function MapPanel({ properties }) {
+  const hasProps = properties.length > 0
   return (
     <div className="h-full w-full pt-16">
-      {loading ? (
-        <div className="h-full flex items-center justify-center text-[#D4AF37]/60">Loading map…</div>
-      ) : (
-        <div className="h-full w-full relative">
-          <PropertyMap properties={props} filterType="all" />
+      <div className="h-full w-full relative">
+        <PropertyMap properties={properties} filterType="all" />
+        {hasProps ? (
           <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-[#0A1628]/85 border border-[#D4AF37]/30 backdrop-blur-sm text-[#D4AF37] text-[9px] uppercase tracking-[0.24em]">Draw-to-search · coming next</div>
-        </div>
-      )}
+        ) : (
+          <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-[#0A1628]/85 border border-[#D4AF37]/30 backdrop-blur-sm text-[#D4AF37] text-[9px] uppercase tracking-[0.24em]">Search with Hobson to see live listings here</div>
+        )}
+      </div>
     </div>
   )
 }

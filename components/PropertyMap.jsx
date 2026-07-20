@@ -5,10 +5,11 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// Custom icons: gold pin = residential (Anasa), navy pin = commercial (Next Endeavor)
+// Custom icons: gold pin = residential (Anasa), navy pin = commercial (Next Endeavor).
+// Both get a light outline so they stay visible against the dark basemap.
 function pinIcon(color) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">
-    <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 28 16 28s16-17 16-28C32 7.2 24.8 0 16 0z" fill="${color}"/>
+    <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 28 16 28s16-17 16-28C32 7.2 24.8 0 16 0z" fill="${color}" stroke="#F5EDE0" stroke-width="1.25"/>
     <circle cx="16" cy="16" r="6" fill="#F5EDE0"/>
   </svg>`
   return L.divIcon({
@@ -20,16 +21,21 @@ function pinIcon(color) {
   })
 }
 
-const PIN_RESIDENTIAL = pinIcon('#C9A867')
-const PIN_COMMERCIAL = pinIcon('#1B3A4F')
+const PIN_RESIDENTIAL = pinIcon('#D4AF37')
+const PIN_COMMERCIAL = pinIcon('#3D6B8C')
+
+// Default map region — swap this one constant to re-target the whole map at a
+// different market (e.g. when the site is licensed to an agent elsewhere).
+const DEFAULT_REGION = { center: [26.7153, -80.0534], zoom: 10 } // Palm Beach County, FL
 
 function FitToBounds({ properties }) {
   const map = useMap()
   useEffect(() => {
     const pts = properties.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng])
-    if (pts.length === 0) return
-    if (pts.length === 1) {
-      map.setView(pts[0], 10)
+    if (pts.length === 0) {
+      map.setView(DEFAULT_REGION.center, DEFAULT_REGION.zoom)
+    } else if (pts.length === 1) {
+      map.setView(pts[0], 13)
     } else {
       map.fitBounds(pts, { padding: [40, 40] })
     }
@@ -46,16 +52,18 @@ export default function PropertyMap({ properties, filterType }) {
   const withCoords = filtered.filter(p => p.lat && p.lng)
 
   return (
-    <div className="h-[640px] w-full rounded overflow-hidden border border-[#C9A867]/30 bg-[#F5EDE0]">
+    <div className="h-[640px] w-full rounded overflow-hidden border border-[#D4AF37]/30 bg-[#0A1628]">
       <MapContainer
-        center={[39.5, -98.35]}
-        zoom={4}
+        center={DEFAULT_REGION.center}
+        zoom={DEFAULT_REGION.zoom}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={true}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          maxZoom={20}
         />
         <FitToBounds properties={withCoords} />
         {withCoords.map(p => (

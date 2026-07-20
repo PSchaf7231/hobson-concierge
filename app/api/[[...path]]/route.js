@@ -626,6 +626,8 @@ function mapResoToAtlas(reso) {
     beds: reso.BedroomsTotal || 0,
     baths: reso.BathroomsTotalInteger || reso.BathroomsTotalDecimal || 0,
     sqft: reso.LivingArea || reso.BuildingAreaTotal || 0,
+    lat: reso.Latitude || null,
+    lng: reso.Longitude || null,
     type: isCommercial ? 'commercial' : 'residential',
     subtype: (reso.PropertySubType || reso.PropertyType || 'home').toLowerCase(),
     amenities: [].concat(
@@ -1040,12 +1042,12 @@ async function handleRoute(request, { params }) {
       const recommendedProperties = session.persona === 'commercial'
         ? []
         : propsCatalog.map(({ _id, ...rest }) => ({
-            ...rest,
+            ...withGeo(rest),
             featured: recIds.includes(rest.id)
           }))
       const favoriteProperties = propsCatalog
         .filter(p => (session.favorite_ids || []).includes(p.id))
-        .map(({ _id, ...rest }) => rest)
+        .map(({ _id, ...rest }) => withGeo(rest))
 
       return handleCORS(NextResponse.json({
         sessionId,
