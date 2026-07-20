@@ -335,6 +335,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   const recognitionRef = useRef(null)
   const wantListeningRef = useRef(false)
   const finalTranscriptRef = useRef('')
+  const silenceTimerRef = useRef(null)
   const scrollRef = useRef(null)
   const lastPlayedRef = useRef(null)
   const sendingRef = useRef(false)
@@ -379,6 +380,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
     ;(async () => {
       try {
         wantListeningRef.current = false
+        clearSilenceTimer()
         try { recognitionRef.current?.stop() } catch (e) {}
         setListening(false)
         const res = await fetch('/api/voice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: last.content }) })
@@ -395,7 +397,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
             if (orbActive && recognitionRef.current) {
               finalTranscriptRef.current = ''
               wantListeningRef.current = true
-              try { recognitionRef.current.start(); setListening(true) } catch (e) {}
+              try { recognitionRef.current.start(); setListening(true); armSilenceTimer() } catch (e) {}
             }
           }, 700)
         }
@@ -403,6 +405,22 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
       } catch (e) { setOrbSpeaking(false) }
     })()
   }, [messages, orbActive])
+
+  // Auto-stop listening after a stretch of true silence — continuous mode has
+  // no natural end, and without this the mic will happily keep transcribing
+  // (and in orb mode, sending) whatever it hears, including a conversation
+  // that has nothing to do with Hobson. Resets on every burst of speech, so
+  // it only fires once you've actually gone quiet for a while.
+  function clearSilenceTimer() {
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null }
+  }
+  function armSilenceTimer() {
+    clearSilenceTimer()
+    silenceTimerRef.current = setTimeout(() => {
+      wantListeningRef.current = false
+      try { recognitionRef.current?.stop() } catch (e) {}
+    }, 15000)
+  }
 
   // Voice setup
   useEffect(() => {
@@ -414,6 +432,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
     r.interimResults = true
     r.lang = 'en-US'
     r.onresult = (e) => {
+      armSilenceTimer()
       // continuous mode re-delivers the whole session's results on every event —
       // only walk the ones new since the last callback (e.resultIndex).
       let finalNew = ''
@@ -434,6 +453,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
           // One turn per utterance in hands-free orb mode — stop here, the
           // TTS-reply effect explicitly restarts listening for the next turn.
           wantListeningRef.current = false
+          clearSilenceTimer()
           try { r.stop() } catch (e) {}
           send(text).finally(() => { sendingRef.current = false })
         }
@@ -445,11 +465,13 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
       if (wantListeningRef.current) {
         try { r.start(); return } catch (e) {}
       }
+      clearSilenceTimer()
       setListening(false)
     }
     r.onerror = (e) => {
       if (e?.error === 'audio-capture' || e?.error === 'not-allowed' || e?.error === 'aborted') {
         wantListeningRef.current = false
+        clearSilenceTimer()
         setListening(false)
         recognitionRef.current = null
       }
@@ -461,11 +483,11 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   async function toggleMic() {
     const r = recognitionRef.current
     if (!r) { alert('Voice input requires Chrome or Edge browser.'); return }
-    if (listening) { wantListeningRef.current = false; try { r.stop() } catch (e) {} ; setListening(false); return }
+    if (listening) { wantListeningRef.current = false; clearSilenceTimer(); try { r.stop() } catch (e) {} ; setListening(false); return }
     setInput('')
     finalTranscriptRef.current = ''
     wantListeningRef.current = true
-    try { r.start(); setListening(true) } catch (e) { wantListeningRef.current = false; alert('Could not start microphone. ' + e.message) }
+    try { r.start(); setListening(true); armSilenceTimer() } catch (e) { wantListeningRef.current = false; alert('Could not start microphone. ' + e.message) }
   }
 
   async function playVoice(text, idx) {
