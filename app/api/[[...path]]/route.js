@@ -462,7 +462,6 @@ Merge new info with KNOWN values — preserve previously captured fields if user
     body: JSON.stringify({
       model: fast ? 'claude-sonnet-4-6' : 'claude-opus-4-8',
       max_tokens: fast ? 600 : 1400,
-      temperature: 0.6,
       system: sysPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content }))
     })
