@@ -53,6 +53,20 @@ export default function PropertyMap({ properties, filterType }) {
 
   return (
     <div className="h-[640px] w-full rounded overflow-hidden border border-[#D4AF37]/30 bg-[#0A1628]">
+      {/* CARTO's dark tiles render almost pure black/gray on their own — tint just the
+          tile layer (not pins/popups/controls) to the site's actual navy via a blend
+          overlay confined to Leaflet's own tile pane. */}
+      <style>{`
+        .leaflet-tile-pane { position: relative; }
+        .leaflet-tile-pane::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: #0A1628;
+          mix-blend-mode: color;
+          pointer-events: none;
+        }
+      `}</style>
       <MapContainer
         center={DEFAULT_REGION.center}
         zoom={DEFAULT_REGION.zoom}
