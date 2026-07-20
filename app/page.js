@@ -888,13 +888,22 @@ function BrandFooterBar() {
             <a href="tel:+15612557285" className="inline-block mt-3 text-[#D4AF37] text-sm font-semibold hover:brightness-110">Call for details · 561-255-7285</a>
           </PopoverContent>
         </Popover>
-        <div className="flex items-center gap-3 px-5 py-3">
-          <img src={LOGOS.commercial} alt="Next Endeavor" className="h-10 w-10 object-contain flex-shrink-0" />
-          <div className="min-w-0">
-            <div style={{ fontFamily: SERIF }} className="text-[#D4AF37] text-sm leading-none truncate">Next Endeavor CRE</div>
-            <div className="text-[9px] uppercase tracking-[0.22em] text-[#F5EDE0]/60 mt-1 truncate">Commercial Investments</div>
-          </div>
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="flex items-center gap-3 px-5 py-3 text-left hover:bg-[#D4AF37]/5 transition w-full">
+              <img src={LOGOS.commercial} alt="Next Endeavor" className="h-10 w-10 object-contain flex-shrink-0" />
+              <div className="min-w-0">
+                <div style={{ fontFamily: SERIF }} className="text-[#D4AF37] text-sm leading-none truncate">Next Endeavor CRE</div>
+                <div className="text-[9px] uppercase tracking-[0.22em] text-[#F5EDE0] font-semibold mt-1 truncate">$15,000 Credit. Every Closing.</div>
+              </div>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="end" className="w-72 bg-[#0B1526] border-[#D4AF37]/30 text-[#F5EDE0]">
+            <div className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] mb-2">Next Endeavor CRE</div>
+            <p className="text-sm leading-relaxed">Buy commercial property over $3M and receive a $15,000 legal fee credit at closing.</p>
+            <a href="tel:+15612557285" className="inline-block mt-3 text-[#D4AF37] text-sm font-semibold hover:brightness-110">Call for details · 561-255-7285</a>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   )
