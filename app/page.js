@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2, Bookmark } from 'lucide-react'
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center bg-[#0A1628] text-[#D4AF37]/60">Loading map…</div> })
@@ -871,13 +872,22 @@ function BrandFooterBar() {
   return (
     <div className="absolute bottom-0 left-0 right-0 z-30 border-t border-[#D4AF37]/25 backdrop-blur-md" style={{ background: 'rgba(10, 22, 40, 0.92)' }}>
       <div className="grid grid-cols-2 divide-x divide-[#D4AF37]/20">
-        <div className="flex items-center gap-3 px-5 py-3">
-          <img src={LOGOS.residential} alt="Anasa" className="h-10 w-14 object-contain flex-shrink-0" />
-          <div className="min-w-0">
-            <div style={{ fontFamily: SERIF }} className="text-[#D4AF37] text-sm leading-none truncate">The Anasa Collection</div>
-            <div className="text-[9px] uppercase tracking-[0.22em] text-[#F5EDE0]/60 mt-1 truncate">Residential Luxury</div>
-          </div>
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="flex items-center gap-3 px-5 py-3 text-left hover:bg-[#D4AF37]/5 transition w-full">
+              <img src={LOGOS.residential} alt="Anasa" className="h-10 w-14 object-contain flex-shrink-0" />
+              <div className="min-w-0">
+                <div style={{ fontFamily: SERIF }} className="text-[#D4AF37] text-sm leading-none truncate">The Anasa Collection</div>
+                <div className="text-[9px] uppercase tracking-[0.22em] text-[#F5EDE0] font-semibold mt-1 truncate">Save Thousands. List Smarter.</div>
+              </div>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="start" className="w-72 bg-[#0B1526] border-[#D4AF37]/30 text-[#F5EDE0]">
+            <div className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] mb-2">The Anasa Collection</div>
+            <p className="text-sm leading-relaxed">Homes over $1M. Full-service listing for 1% or less. No compromise on service.</p>
+            <a href="tel:+15612557285" className="inline-block mt-3 text-[#D4AF37] text-sm font-semibold hover:brightness-110">Call for details · 561-255-7285</a>
+          </PopoverContent>
+        </Popover>
         <div className="flex items-center gap-3 px-5 py-3">
           <img src={LOGOS.commercial} alt="Next Endeavor" className="h-10 w-10 object-contain flex-shrink-0" />
           <div className="min-w-0">
