@@ -230,18 +230,19 @@ function InlineLeadCapture() {
     )
   }
 
-  const inputCls = "h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/25 focus:border-[#D4AF37] focus:bg-[#D4AF37]/15 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-[11px] px-2.5 transition"
+  const inputCls = "h-8 rounded bg-[#D4AF37]/20 border border-[#D4AF37]/60 focus:border-[#D4AF37] focus:bg-[#D4AF37]/25 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/50 text-[11px] px-2.5 transition"
 
   return (
     <>
       {/* Desktop / tablet: inline 4-field capture bar */}
       <div className="hidden lg:flex items-center gap-1.5 flex-shrink-0">
+        <span className="text-[9px] uppercase tracking-[0.2em] text-[#D4AF37]/80 font-medium mr-0.5">Save Search:</span>
         <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-24`} />
         <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-24`} />
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-36`} />
         <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-36`} />
         <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition">
-          {busy ? '…' : 'Save'}
+          {busy ? '…' : 'Save Search'}
         </button>
       </div>
       {/* Mobile: compact "Save" button that opens the modal */}
@@ -1089,7 +1090,7 @@ function App() {
       <footer className="flex-shrink-0 border-t border-[#D4AF37]/15 py-2" style={{ background: NAVY }}>
         <div className="max-w-[1600px] mx-auto px-6 flex items-center justify-between text-[10px]">
           <div className="text-[#F5EDE0]/40">Powered by Hobson · Real Estate, Handled</div>
-          <a href="#agent-login" className="text-[#F5EDE0]/50 hover:text-[#D4AF37] transition uppercase tracking-[0.22em]">Agent Login</a>
+          <a href="https://app.boldtrail.com/" target="_blank" rel="noopener noreferrer" className="text-[#F5EDE0]/50 hover:text-[#D4AF37] transition uppercase tracking-[0.22em]">Agent Login</a>
         </div>
       </footer>
     </div>
