@@ -57,7 +57,7 @@ function PropertyCard({ p, index = 0, isFavorite = false, onToggleFavorite }) {
       }}
     >
       {/* Photo — wider aspect so overall card ends up nicely portrait */}
-      <div className="relative overflow-hidden" style={{ aspectRatio: '16/10' }}>
+      <div className="relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
         <img
           src={p.heroImage || p.images?.[0] || IDLE_IMAGES[index % IDLE_IMAGES.length]}
           alt={p.address || p.title || 'Property'}
@@ -89,38 +89,38 @@ function PropertyCard({ p, index = 0, isFavorite = false, onToggleFavorite }) {
       />
 
       {/* Body */}
-      <div className="px-5 pt-4 pb-4">
+      <div className="px-4 pt-3 pb-3">
         <div
           className="text-[#C9A227] leading-none"
           style={{
             fontFamily: '"Cormorant Garamond", "Playfair Display", Georgia, serif',
             fontWeight: 600,
-            fontSize: '1.75rem',
+            fontSize: '1.4rem',
             letterSpacing: '.02em'
           }}
         >
           {fullMoney(p.price)}
         </div>
-        <div className="text-[#95A3B8] text-[0.78rem] mt-2 truncate" style={{ letterSpacing: '.03em' }}>
+        <div className="text-[#95A3B8] text-[0.72rem] mt-1.5 truncate" style={{ letterSpacing: '.03em' }}>
           {p.address || `Address available upon request · ${p.city || 'Palm Beach County'}, ${p.state || 'FL'}`}
         </div>
 
         {/* Specs */}
-        <div className="flex items-center justify-between gap-2 mt-3.5 text-[0.72rem] text-[#95A3B8]" style={{ fontWeight: 400 }}>
+        <div className="flex items-center justify-between gap-2 mt-2.5 text-[0.68rem] text-[#95A3B8]" style={{ fontWeight: 400 }}>
           <span className="flex items-center gap-1.5">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
               <path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18h18M6 10V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"/>
             </svg>
             <b className="text-[#EDF1F7] font-medium">{p.beds || '—'}</b>&nbsp;Beds
           </span>
           <span className="flex items-center gap-1.5">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
               <path d="M4 12h16M6 12V6a2 2 0 0 1 2-2h1M4 12l1.5 6h13L20 12"/>
             </svg>
             <b className="text-[#EDF1F7] font-medium">{p.baths || '—'}</b>&nbsp;Baths
           </span>
           <span className="flex items-center gap-1.5">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#C9A227" strokeWidth="1.4" opacity="0.9">
               <rect x="4" y="4" width="16" height="16" rx="1"/>
               <path d="M4 15h5v5"/>
             </svg>
@@ -133,7 +133,7 @@ function PropertyCard({ p, index = 0, isFavorite = false, onToggleFavorite }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setShowContact(true) }}
-        className="w-full py-2 text-[10px] uppercase tracking-[0.28em] text-[#C9A227] hover:bg-[#C9A227]/10 transition-colors font-medium border-t"
+        className="w-full py-1.5 text-[9px] uppercase tracking-[0.24em] text-[#C9A227] hover:bg-[#C9A227]/10 transition-colors font-medium border-t"
         style={{ background: 'rgba(11, 21, 38, 0.5)', borderColor: 'rgba(201, 162, 39, 0.15)' }}
       >
         Design this home →
@@ -356,7 +356,7 @@ export default function PropertyShowcase({ properties = [], favIds, onToggleFavo
       `}</style>
 
       {/* Header */}
-      <div className="relative z-10 pt-8 px-8 pb-4">
+      <div className="relative z-10 pt-4 px-6 pb-2">
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1
@@ -364,15 +364,15 @@ export default function PropertyShowcase({ properties = [], favIds, onToggleFavo
               style={{
                 fontFamily: '"Bodoni Moda", "Playfair Display", Georgia, serif',
                 fontWeight: 500,
-                fontSize: '1.55rem',
+                fontSize: '1.3rem',
                 letterSpacing: '.04em'
               }}
             >
               Curated Residences
             </h1>
             <div
-              className="text-[#95A3B8] mt-1.5 uppercase"
-              style={{ fontSize: '.72rem', letterSpacing: '.28em' }}
+              className="text-[#95A3B8] mt-1 uppercase"
+              style={{ fontSize: '.68rem', letterSpacing: '.24em' }}
             >
               {hasProps
                 ? `Palm Beach County · ${properties.length} result${properties.length === 1 ? '' : 's'}`
@@ -429,11 +429,11 @@ export default function PropertyShowcase({ properties = [], favIds, onToggleFavo
             style={{
               width: '98%',
               maxWidth: '100%',
-              maxHeight: 'calc(100vh - 200px)',
+              maxHeight: 'calc(100vh - 140px)',
               scrollbarWidth: 'thin'
             }}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 pt-2">
               {properties.map((p, i) => (
                 <PropertyCard key={p.id || p.listingId || i} p={p} index={i} isFavorite={favIds ? favIds.has(p.id) : false} onToggleFavorite={onToggleFavorite} />
               ))}
