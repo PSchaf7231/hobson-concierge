@@ -900,7 +900,7 @@ function BrandFooterBar() {
           </PopoverTrigger>
           <PopoverContent side="top" align="end" className="w-72 bg-[#0B1526] border-[#D4AF37]/30 text-[#F5EDE0]">
             <div className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] mb-2">Next Endeavor CRE</div>
-            <p className="text-sm leading-relaxed">Buy commercial property over $3M and receive a $15,000 legal fee credit at closing.</p>
+            <p className="text-sm leading-relaxed">Buy your next commercial property from us over $3,000,000 and receive a $15,000 legal credit fee.</p>
             <a href="tel:+15612557285" className="inline-block mt-3 text-[#D4AF37] text-sm font-semibold hover:brightness-110">Call for details · 561-255-7285</a>
           </PopoverContent>
         </Popover>
