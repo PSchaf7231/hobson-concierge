@@ -685,44 +685,81 @@ async function handleRoute(request, { params }) {
       return handleCORS(NextResponse.json({ message: 'Atlas Concierge API live' }))
     }
 
-    // ============= ELEVENLABS VOICE — Hobson speaks =============
+    // ============= VOICE — Hobson speaks (ElevenLabs primary, Deepgram fallback) =============
     if (route === '/voice' && method === 'POST') {
       const body = await request.json()
       const text = (body.text || '').toString().slice(0, 2500)
       if (!text) return handleCORS(NextResponse.json({ error: 'text required' }, { status: 400 }))
       const apiKey = process.env.ELEVENLABS_API_KEY
       const voiceId = body.voiceId || process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'
-      if (!apiKey) return handleCORS(NextResponse.json({ error: 'ElevenLabs not configured' }, { status: 400 }))
-      try {
-        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
-          method: 'POST',
-          headers: {
-            'xi-api-key': apiKey,
-            'Content-Type': 'application/json',
-            'Accept': 'audio/mpeg'
-          },
-          body: JSON.stringify({
-            text,
-            model_id: 'eleven_turbo_v2_5',
-            voice_settings: { stability: 0.55, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true }
+
+      if (apiKey) {
+        try {
+          const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+            method: 'POST',
+            headers: {
+              'xi-api-key': apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'audio/mpeg'
+            },
+            body: JSON.stringify({
+              text,
+              model_id: 'eleven_turbo_v2_5',
+              voice_settings: { stability: 0.55, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true }
+            })
           })
-        })
-        if (!res.ok) {
-          const errText = await res.text()
-          return handleCORS(NextResponse.json({ error: 'voice error: ' + errText.slice(0, 200) }, { status: res.status }))
-        }
-        const audioBuffer = await res.arrayBuffer()
-        return new NextResponse(audioBuffer, {
-          status: 200,
-          headers: {
-            'Content-Type': 'audio/mpeg',
-            'Cache-Control': 'no-store',
-            'Access-Control-Allow-Origin': process.env.CORS_ORIGINS || '*'
+          if (!res.ok) {
+            const errText = await res.text()
+            return handleCORS(NextResponse.json({ error: 'voice error: ' + errText.slice(0, 200) }, { status: res.status }))
           }
-        })
-      } catch (e) {
-        return handleCORS(NextResponse.json({ error: e.message }, { status: 500 }))
+          const audioBuffer = await res.arrayBuffer()
+          return new NextResponse(audioBuffer, {
+            status: 200,
+            headers: {
+              'Content-Type': 'audio/mpeg',
+              'Cache-Control': 'no-store',
+              'Access-Control-Allow-Origin': process.env.CORS_ORIGINS || '*'
+            }
+          })
+        } catch (e) {
+          return handleCORS(NextResponse.json({ error: e.message }, { status: 500 }))
+        }
       }
+
+      // Stopgap while ElevenLabs isn't configured: Deepgram Aura TTS. Voice model is
+      // an env var (not hardcoded) so swapping to whichever voice gets picked later
+      // is a one-line config change, no redeploy of code needed.
+      const dgKey = process.env.DEEPGRAM_API_KEY
+      if (dgKey) {
+        const dgVoice = process.env.DEEPGRAM_VOICE || 'aura-2-thalia-en'
+        try {
+          const res = await fetch(`https://api.deepgram.com/v1/speak?model=${dgVoice}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Token ${dgKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text })
+          })
+          if (!res.ok) {
+            const errText = await res.text()
+            return handleCORS(NextResponse.json({ error: 'voice error: ' + errText.slice(0, 200) }, { status: res.status }))
+          }
+          const audioBuffer = await res.arrayBuffer()
+          return new NextResponse(audioBuffer, {
+            status: 200,
+            headers: {
+              'Content-Type': 'audio/mpeg',
+              'Cache-Control': 'no-store',
+              'Access-Control-Allow-Origin': process.env.CORS_ORIGINS || '*'
+            }
+          })
+        } catch (e) {
+          return handleCORS(NextResponse.json({ error: e.message }, { status: 500 }))
+        }
+      }
+
+      return handleCORS(NextResponse.json({ error: 'No voice provider configured (ElevenLabs or Deepgram)' }, { status: 400 }))
     }
 
     // List available ElevenLabs voices (for picking)
