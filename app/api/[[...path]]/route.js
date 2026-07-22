@@ -731,7 +731,7 @@ async function handleRoute(request, { params }) {
       // is a one-line config change, no redeploy of code needed.
       const dgKey = process.env.DEEPGRAM_API_KEY
       if (dgKey) {
-        const dgVoice = process.env.DEEPGRAM_VOICE || 'aura-2-thalia-en'
+        const dgVoice = process.env.DEEPGRAM_VOICE || 'aura-2-draco-en'
         try {
           const res = await fetch(`https://api.deepgram.com/v1/speak?model=${dgVoice}`, {
             method: 'POST',
