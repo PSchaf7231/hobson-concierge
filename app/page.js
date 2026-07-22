@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2, Bookmark } from 'lucide-react'
+import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2, Bookmark, Play, Pause } from 'lucide-react'
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center bg-[#0A1628] text-[#D4AF37]/60">Loading map…</div> })
 const MicroOrb = dynamic(() => import('@/components/MicroOrb'), { ssr: false })
@@ -326,6 +326,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   const [leadTier, setLeadTier] = useState(null)
   const [leadScore, setLeadScore] = useState(null)
   const [listening, setListening] = useState(false)
+  const [videoPlaying, setVideoPlaying] = useState(true)
   const [speakingIdx, setSpeakingIdx] = useState(null)
   const [orbActive, setOrbActive] = useState(false)
   const [orbSpeaking, setOrbSpeaking] = useState(false)
@@ -773,12 +774,15 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
             loop
             muted
             playsInline
+            onPlay={() => setVideoPlaying(true)}
+            onPause={() => setVideoPlaying(false)}
             className="absolute inset-0 w-full h-full object-cover"
             poster=""
           >
             <source src="/hobson-avatar.mp4" type="video/mp4" />
           </video>
-          {/* Play / Pause toggle — small "P" pill, top-right of video */}
+          {/* Play / Pause toggle — a real icon that reflects current state, not an
+              unlabeled letter nobody could guess the meaning of. */}
           <button
             onClick={() => {
               const v = window.__hobsonVideo
@@ -786,10 +790,11 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
               v.muted = false
               if (v.paused) v.play(); else v.pause()
             }}
-            title="Play / pause (unmutes on first click)"
-            className="absolute top-2 right-2 z-10 h-6 w-6 rounded-full bg-[#0A1628]/80 hover:bg-[#0A1628] backdrop-blur-sm border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] font-semibold flex items-center justify-center transition"
+            title={videoPlaying ? 'Pause Hobson' : 'Play Hobson'}
+            aria-label={videoPlaying ? 'Pause Hobson' : 'Play Hobson'}
+            className="absolute top-2 right-2 z-10 h-7 w-7 rounded-full bg-[#0A1628]/80 hover:bg-[#0A1628] backdrop-blur-sm border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center transition"
           >
-            P
+            {videoPlaying ? <Pause className="h-3.5 w-3.5" fill="currentColor" /> : <Play className="h-3.5 w-3.5" fill="currentColor" />}
           </button>
           {/* Tiny status pill so users still see Hobson's state (listening/speaking/thinking) */}
           <div className="absolute bottom-2 right-3 z-10 px-2 py-0.5 rounded-full bg-[#0A1628]/80 backdrop-blur-sm border border-[#D4AF37]/30 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37]/90 font-medium">
