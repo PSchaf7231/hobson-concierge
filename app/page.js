@@ -639,7 +639,6 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   // Option lists
   const PRICE_OPTS = [
     { value: '', label: 'Any' },
-    { value: '100000', label: '$100k' }, { value: '200000', label: '$200k' }, { value: '300000', label: '$300k' },
     { value: '400000', label: '$400k' }, { value: '500000', label: '$500k' }, { value: '600000', label: '$600k' },
     { value: '750000', label: '$750k' }, { value: '1000000', label: '$1M' }, { value: '1500000', label: '$1.5M' },
     { value: '2000000', label: '$2M' }, { value: '3000000', label: '$3M' }, { value: '5000000', label: '$5M' },
