@@ -339,6 +339,8 @@ function mapResoToHobson(r) {
     description: r.PublicRemarks || '',
     images: images.length ? images : ['/placeholder-property.jpg'],
     heroImage: images[0] || '/placeholder-property.jpg',
+    lat: r.Latitude || null,
+    lng: r.Longitude || null,
     location: (r.Latitude && r.Longitude) ? { type: 'Point', coordinates: [r.Longitude, r.Latitude] } : null,
     amenities: [],
     virtualTour: r.VirtualTourURLUnbranded || null,
