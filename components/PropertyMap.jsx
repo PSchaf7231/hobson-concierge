@@ -8,7 +8,7 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
 // Default map region — swap this one constant to re-target the whole map at a
 // different market (e.g. when the site is licensed to an agent elsewhere).
-const DEFAULT_REGION = { longitude: -80.0534, latitude: 26.7153, zoom: 10 } // Palm Beach County, FL
+const DEFAULT_REGION = { longitude: -80.095, latitude: 26.415, zoom: 11 } // Boca Raton / Delray Beach, FL
 
 function formatPrice(n) {
   if (!n) return '—'
