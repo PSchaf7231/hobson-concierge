@@ -514,12 +514,17 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
     ? 'Welcome. I am Hobson. Whom do I have the pleasure of assisting today — and tell me, what does the right home feel like?'
     : 'Welcome to Next Endeavor CRE. I am Hobson. Tell me about the mandate — and I\'ll connect you with Paul personally.'
 
-  async function send(text) {
+  // `silent`: used by the filter-box Search button. It still runs the exact
+  // same backend search (so results, preferences, and lead scoring stay
+  // correct), it just doesn't put a fake "user said this" bubble in the
+  // chat transcript — that should only happen when someone actually types
+  // or speaks to Hobson directly.
+  async function send(text, { silent = false } = {}) {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     setInput('')
-    const newMsgs = [...messages, { role: 'user', content: msg }]
-    setMessages(newMsgs)
+    const newMsgs = silent ? messages : [...messages, { role: 'user', content: msg }]
+    if (!silent) setMessages(newMsgs)
     setLoading(true)
     try {
       const res = await fetch('/api/chat', {
@@ -532,7 +537,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
         setSessionId(data.sessionId)
         localStorage.setItem('atlas_session', data.sessionId)
       }
-      setMessages([...newMsgs, { role: 'assistant', content: data.reply || '...' }])
+      if (!silent) setMessages([...newMsgs, { role: 'assistant', content: data.reply || '...' }])
       setRecommended(data.recommended || [])
       onProperties && onProperties(data.recommended || [])
       setFavorites(data.favorites || [])
@@ -541,7 +546,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
       setLeadScore(data.lead_score)
       // Lead capture is nav-bar-only — no intrusive center-screen pop-ups anywhere.
     } catch (e) {
-      setMessages([...newMsgs, { role: 'assistant', content: 'Connection issue. Try again?' }])
+      if (!silent) setMessages([...newMsgs, { role: 'assistant', content: 'Connection issue. Try again?' }])
     } finally {
       setLoading(false)
     }
@@ -629,7 +634,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
     const q = parts.length ? `Show me properties ${parts.join(', ')}.` : 'Show me the full Palm Beach County inventory, any price.'
     setSearchOpen(false)
     setMoreFilters(false)
-    send(q)
+    send(q, { silent: true })
   }
   // Option lists
   const PRICE_OPTS = [
