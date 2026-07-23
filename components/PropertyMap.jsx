@@ -1,109 +1,129 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import Map, { Marker, Popup, NavigationControl } from 'react-map-gl/mapbox'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
-// Custom icons: gold pin = residential (Anasa), navy pin = commercial (Next Endeavor).
-// Both get a light outline so they stay visible against the dark basemap.
-function pinIcon(color) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">
-    <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 28 16 28s16-17 16-28C32 7.2 24.8 0 16 0z" fill="${color}" stroke="#F5EDE0" stroke-width="1.25"/>
-    <circle cx="16" cy="16" r="6" fill="#F5EDE0"/>
-  </svg>`
-  return L.divIcon({
-    html: svg,
-    className: 'atlas-pin',
-    iconSize: [32, 44],
-    iconAnchor: [16, 44],
-    popupAnchor: [0, -36]
-  })
-}
-
-const PIN_RESIDENTIAL = pinIcon('#D4AF37')
-const PIN_COMMERCIAL = pinIcon('#3D6B8C')
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
 // Default map region — swap this one constant to re-target the whole map at a
 // different market (e.g. when the site is licensed to an agent elsewhere).
-const DEFAULT_REGION = { center: [26.7153, -80.0534], zoom: 10 } // Palm Beach County, FL
+const DEFAULT_REGION = { longitude: -80.0534, latitude: 26.7153, zoom: 10 } // Palm Beach County, FL
 
-function FitToBounds({ properties }) {
-  const map = useMap()
-  useEffect(() => {
-    const pts = properties.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng])
-    if (pts.length === 0) {
-      map.setView(DEFAULT_REGION.center, DEFAULT_REGION.zoom)
-    } else if (pts.length === 1) {
-      map.setView(pts[0], 13)
-    } else {
-      map.fitBounds(pts, { padding: [40, 40] })
-    }
-  }, [properties, map])
-  return null
+function formatPrice(n) {
+  if (!n) return '—'
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
+  if (n >= 1_000) return `$${Math.round(n / 1000)}K`
+  return `$${n}`
+}
+
+// Price-bubble marker — the familiar Zillow/Redfin-style convention people
+// already know how to read on a real estate map, rather than a plain pin.
+// Gold border on the residential ones keeps a touch of Hobson's branding.
+function PriceBubble({ price, commercial }) {
+  return (
+    <div
+      style={{
+        background: commercial ? '#1B3A4F' : '#F5EDE0',
+        color: commercial ? '#F5EDE0' : '#1B3A4F',
+        border: `1.5px solid ${commercial ? '#3D6B8C' : '#D4AF37'}`,
+        borderRadius: 999,
+        padding: '4px 9px',
+        fontSize: 12,
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+        cursor: 'pointer',
+        boxShadow: '0 2px 6px rgba(0,0,0,.35)'
+      }}
+    >
+      {formatPrice(price)}
+    </div>
+  )
 }
 
 export default function PropertyMap({ properties, filterType }) {
   const [mounted, setMounted] = useState(false)
+  const [popupInfo, setPopupInfo] = useState(null)
+  const mapRef = useRef(null)
   useEffect(() => setMounted(true), [])
-  if (!mounted) return null
 
   const filtered = filterType === 'all' ? properties : properties.filter(p => p.type === filterType)
-  const withCoords = filtered.filter(p => p.lat && p.lng)
+  const withCoords = useMemo(() => filtered.filter(p => p.lat && p.lng), [filtered])
+
+  // Fit to the results' bounds, or fall back to the default region when there
+  // are none (idle state) or none with usable coordinates.
+  useEffect(() => {
+    const map = mapRef.current?.getMap && mapRef.current.getMap()
+    if (!map) return
+    if (withCoords.length === 0) {
+      map.flyTo({ center: [DEFAULT_REGION.longitude, DEFAULT_REGION.latitude], zoom: DEFAULT_REGION.zoom, duration: 800 })
+    } else if (withCoords.length === 1) {
+      map.flyTo({ center: [withCoords[0].lng, withCoords[0].lat], zoom: 13, duration: 800 })
+    } else {
+      const lngs = withCoords.map(p => p.lng)
+      const lats = withCoords.map(p => p.lat)
+      map.fitBounds(
+        [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+        { padding: 60, duration: 800 }
+      )
+    }
+  }, [withCoords])
+
+  if (!mounted) return null
+
+  if (!MAPBOX_TOKEN) {
+    return (
+      <div className="h-[640px] w-full rounded overflow-hidden border border-[#D4AF37]/30 bg-[#0A1628] flex items-center justify-center text-[#D4AF37]/60 text-sm text-center px-6">
+        Map unavailable — Mapbox isn't configured yet.
+      </div>
+    )
+  }
 
   return (
-    <div className="h-[640px] w-full rounded overflow-hidden border border-[#D4AF37]/30 bg-[#0A1628]">
-      {/* CARTO's dark tiles render almost pure black/gray on their own — tint just the
-          tile layer (not pins/popups/controls) to the site's actual navy via a blend
-          overlay confined to Leaflet's own tile pane. */}
-      <style>{`
-        .leaflet-tile-pane { position: relative; }
-        .leaflet-tile-pane::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: #0A1628;
-          mix-blend-mode: color;
-          pointer-events: none;
-        }
-      `}</style>
-      <MapContainer
-        center={DEFAULT_REGION.center}
-        zoom={DEFAULT_REGION.zoom}
-        style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom={true}
+    <div className="h-[640px] w-full rounded overflow-hidden border border-[#D4AF37]/30">
+      <Map
+        ref={mapRef}
+        mapboxAccessToken={MAPBOX_TOKEN}
+        initialViewState={{ longitude: DEFAULT_REGION.longitude, latitude: DEFAULT_REGION.latitude, zoom: DEFAULT_REGION.zoom }}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          subdomains="abcd"
-          maxZoom={20}
-        />
-        <FitToBounds properties={withCoords} />
+        <NavigationControl position="bottom-right" />
         {withCoords.map(p => (
           <Marker
             key={p.id}
-            position={[p.lat, p.lng]}
-            icon={p.type === 'commercial' ? PIN_COMMERCIAL : PIN_RESIDENTIAL}
+            longitude={p.lng}
+            latitude={p.lat}
+            anchor="bottom"
+            onClick={(e) => { e.originalEvent.stopPropagation(); setPopupInfo(p) }}
           >
-            <Popup>
-              <div className="text-xs" style={{ minWidth: 200 }}>
-                <img src={p.image} alt={p.title} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 4, marginBottom: 6 }} />
-                <div style={{ fontWeight: 600, fontFamily: 'Playfair Display, serif', color: '#1B3A4F', fontSize: 14 }}>{p.title}</div>
-                <div style={{ color: '#6B7280', marginTop: 2 }}>{p.city}, {p.state}</div>
-                <div style={{ color: '#C9A867', fontWeight: 700, fontSize: 16, marginTop: 4 }}>${p.price.toLocaleString()}</div>
-                <div style={{ marginTop: 6, color: '#1B3A4F' }}>
-                  {p.beds > 0 && <span>{p.beds}bd · </span>}
-                  {p.baths > 0 && <span>{p.baths}ba · </span>}
-                  <span>{p.sqft.toLocaleString()} sqft</span>
-                  {p.capRate && <span> · {p.capRate}% cap</span>}
-                </div>
-                <a href={`/brief/${p.id}`} target="_blank" style={{ display: 'inline-block', marginTop: 8, color: '#C9A867', fontWeight: 600 }}>Open full brief →</a>
-              </div>
-            </Popup>
+            <PriceBubble price={p.price} commercial={p.type === 'commercial'} />
           </Marker>
         ))}
-      </MapContainer>
+        {popupInfo && (
+          <Popup
+            longitude={popupInfo.lng}
+            latitude={popupInfo.lat}
+            anchor="top"
+            onClose={() => setPopupInfo(null)}
+            closeOnClick={false}
+          >
+            <div className="text-xs" style={{ minWidth: 200 }}>
+              <img src={popupInfo.image} alt={popupInfo.title} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 4, marginBottom: 6 }} />
+              <div style={{ fontWeight: 600, fontFamily: 'Playfair Display, serif', color: '#1B3A4F', fontSize: 14 }}>{popupInfo.title}</div>
+              <div style={{ color: '#6B7280', marginTop: 2 }}>{popupInfo.city}, {popupInfo.state}</div>
+              <div style={{ color: '#C9A867', fontWeight: 700, fontSize: 16, marginTop: 4 }}>${popupInfo.price.toLocaleString()}</div>
+              <div style={{ marginTop: 6, color: '#1B3A4F' }}>
+                {popupInfo.beds > 0 && <span>{popupInfo.beds}bd · </span>}
+                {popupInfo.baths > 0 && <span>{popupInfo.baths}ba · </span>}
+                <span>{popupInfo.sqft.toLocaleString()} sqft</span>
+                {popupInfo.capRate && <span> · {popupInfo.capRate}% cap</span>}
+              </div>
+              <a href={`/brief/${popupInfo.id}`} target="_blank" style={{ display: 'inline-block', marginTop: 8, color: '#C9A867', fontWeight: 600 }}>Open full brief →</a>
+            </div>
+          </Popup>
+        )}
+      </Map>
     </div>
   )
 }
