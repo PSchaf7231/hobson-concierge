@@ -281,7 +281,9 @@ function CompactSelect({ value, onChange, options, placeholder = 'Any', classNam
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [open])
-  const selected = options.find(o => o.value === value)
+  // An empty value matches the list's own "Any" option — treat that as
+  // unselected so the box shows what it's for (e.g. "Min Price"), not "Any".
+  const selected = value ? options.find(o => o.value === value) : null
   const label = selected ? selected.label : placeholder
   return (
     <div ref={ref} className={`relative ${className}`}>
@@ -683,8 +685,8 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
             <div className="grid grid-cols-2 gap-2">
               <CompactSelect value={filters.priceMin} onChange={v => setFilters(f => ({...f, priceMin: v}))} options={PRICE_OPTS} placeholder="Min Price" />
               <CompactSelect value={filters.priceMax} onChange={v => setFilters(f => ({...f, priceMax: v}))} options={PRICE_OPTS} placeholder="Max Price" />
-              <CompactSelect value={filters.beds} onChange={v => setFilters(f => ({...f, beds: v}))} options={BED_OPTS} placeholder="Beds" />
-              <CompactSelect value={filters.baths} onChange={v => setFilters(f => ({...f, baths: v}))} options={BATH_OPTS} placeholder="Baths" />
+              <CompactSelect value={filters.beds} onChange={v => setFilters(f => ({...f, beds: v}))} options={BED_OPTS} placeholder="Min Bedrooms" />
+              <CompactSelect value={filters.baths} onChange={v => setFilters(f => ({...f, baths: v}))} options={BATH_OPTS} placeholder="Min Bathrooms" />
             </div>
             <CompactSelect value={filters.propertyType} onChange={v => setFilters(f => ({...f, propertyType: v}))} options={PROPTYPE_OPTS} placeholder="Property Type" />
           </div>
