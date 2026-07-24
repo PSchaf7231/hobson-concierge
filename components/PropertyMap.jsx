@@ -109,7 +109,7 @@ export default function PropertyMap({ properties, filterType }) {
             closeOnClick={false}
           >
             <div className="text-xs" style={{ minWidth: 200 }}>
-              <img src={popupInfo.heroImage || popupInfo.images?.[0] || '/placeholder-property.jpg'} alt={popupInfo.title} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 4, marginBottom: 6 }} />
+              <img src={popupInfo.heroImage || popupInfo.images?.[0] || '/hobson-homes/home-1.jpg'} alt={popupInfo.title} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 4, marginBottom: 6 }} />
               <div style={{ fontWeight: 600, fontFamily: 'Playfair Display, serif', color: '#1B3A4F', fontSize: 14 }}>{popupInfo.title}</div>
               <div style={{ color: '#6B7280', marginTop: 2 }}>{popupInfo.city}, {popupInfo.state}</div>
               <div style={{ color: '#C9A867', fontWeight: 700, fontSize: 16, marginTop: 4 }}>${popupInfo.price.toLocaleString()}</div>
