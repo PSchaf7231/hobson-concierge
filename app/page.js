@@ -1069,6 +1069,14 @@ function App() {
   // On desktop (lg+) both are always visible side-by-side.
   const [mobileView, setMobileView] = useState('chat')
 
+  // When a search (chat or filter-box) actually turns up results, jump to the
+  // Properties view automatically on mobile — nothing on screen otherwise
+  // hints that there's a toggle to tap to go see them.
+  function handleProperties(list) {
+    setHeroShowcase(list)
+    if (Array.isArray(list) && list.length > 0) setMobileView('properties')
+  }
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
@@ -1147,7 +1155,7 @@ function App() {
           </div>
           {/* LEFT panel — chat/hobson (visible on desktop always, on mobile only when 'chat' selected) */}
           <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:block min-h-0`}>
-            <ChatPanel onProperties={setHeroShowcase} onFavoritesChange={setFavState} />
+            <ChatPanel onProperties={handleProperties} onFavoritesChange={setFavState} />
           </div>
           {/* Gold vertical divider */}
           <div className="hidden lg:block w-px" style={{ background: `linear-gradient(to bottom, transparent 0%, ${GOLD} 8%, ${GOLD} 92%, transparent 100%)` }} />
