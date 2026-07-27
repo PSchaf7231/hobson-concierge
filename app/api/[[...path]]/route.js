@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import { NextResponse } from 'next/server'
+import { DeepgramClient } from '@deepgram/sdk'
 
 let client
 let db
@@ -685,6 +686,20 @@ async function handleRoute(request, { params }) {
 
     if ((route === '/' || route === '/root') && method === 'GET') {
       return handleCORS(NextResponse.json({ message: 'Atlas Concierge API live' }))
+    }
+
+    // ============= VOICE AGENT TOKEN — short-lived Deepgram token for the live voice call =============
+    // Mints a scoped, ~1hr JWT server-side so the real DEEPGRAM_API_KEY never reaches the browser.
+    if (route === '/voice-agent-token' && method === 'POST') {
+      const dgKey = process.env.DEEPGRAM_API_KEY
+      if (!dgKey) return handleCORS(NextResponse.json({ error: 'Deepgram not configured' }, { status: 400 }))
+      try {
+        const dg = new DeepgramClient({ apiKey: dgKey })
+        const grant = await dg.auth.v1.tokens.grant({ ttl_seconds: 3600 })
+        return handleCORS(NextResponse.json(grant))
+      } catch (e) {
+        return handleCORS(NextResponse.json({ error: e.message }, { status: 500 }))
+      }
     }
 
     // ============= VOICE — Hobson speaks (ElevenLabs primary, Deepgram fallback) =============

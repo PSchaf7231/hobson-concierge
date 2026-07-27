@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import HobsonVoiceAgent from '@/components/HobsonVoiceAgent'
 import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Mic, MicOff, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2, Bookmark, Play, Pause } from 'lucide-react'
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center bg-[#0A1628] text-[#D4AF37]/60">Loading map…</div> })
@@ -334,6 +335,7 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   const [orbSpeaking, setOrbSpeaking] = useState(false)
   const [leadCaptured, setLeadCaptured] = useState(false)
   const [captureOpen, setCaptureOpen] = useState(false)
+  const [liveCallOpen, setLiveCallOpen] = useState(false)
   const audioRef = useRef(null)
   const recognitionRef = useRef(null)
   const wantListeningRef = useRef(false)
@@ -852,6 +854,10 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
             <button onClick={toggleMic} className={`h-10 w-10 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 ${listening ? 'bg-[#D4AF37] text-[#0A1628] animate-pulse' : 'border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]'}`} aria-label="voice input" title={listening ? 'Listening…' : 'Speak to Hobson'}>
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
+            <button onClick={() => setLiveCallOpen(true)} className="h-10 w-10 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]" aria-label="live call with Hobson" title="Talk live with Hobson (beta)">
+              <Volume2 className="h-4 w-4" />
+            </button>
+            {liveCallOpen && <HobsonVoiceAgent onClose={() => setLiveCallOpen(false)} />}
             <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={listening ? 'Listening…' : 'Tell Hobson what you\'re looking for…'} rows={3} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-2 transition resize-none leading-relaxed" disabled={loading} />
             <button onClick={() => send()} disabled={loading || !input.trim()} className="h-10 w-10 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
               <Send className="h-4 w-4" />
