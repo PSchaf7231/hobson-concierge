@@ -88,10 +88,6 @@ export default function HobsonVoiceAgent({ onClose }) {
         const connection = await dg.agent.v1.connect({ Authorization: `Bearer ${tokenData.access_token}` })
         connectionRef.current = connection
 
-        connection.on('open', () => {
-          if (cancelled) return
-          connection.connect()
-        })
         connection.on('error', (err) => {
           if (cancelled) return
           setStatus('error')
