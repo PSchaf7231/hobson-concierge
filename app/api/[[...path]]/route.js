@@ -703,6 +703,13 @@ async function handleRoute(request, { params }) {
       }
     }
 
+    // ============= VOICE AGENT LOG — client-side diagnostics for the live voice call =============
+    if (route === '/voice-agent-log' && method === 'POST') {
+      const body = await request.json().catch(() => ({}))
+      console.error('voice-agent-client:', JSON.stringify(body))
+      return handleCORS(NextResponse.json({ ok: true }))
+    }
+
     // ============= VOICE — Hobson speaks (ElevenLabs primary, Deepgram fallback) =============
     if (route === '/voice' && method === 'POST') {
       const body = await request.json()

@@ -61,6 +61,17 @@ function floatTo16BitPCM(float32Array) {
   return out
 }
 
+function reportLog(payload) {
+  try {
+    fetch('/api/voice-agent-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {})
+  } catch (e) {}
+}
+
 export default function HobsonVoiceAgent({ onClose }) {
   const [status, setStatus] = useState('connecting') // connecting | listening | speaking | error | closed
   const [errorMsg, setErrorMsg] = useState('')
@@ -89,11 +100,13 @@ export default function HobsonVoiceAgent({ onClose }) {
         connectionRef.current = connection
 
         connection.on('error', (err) => {
+          reportLog({ event: 'sdk-error', message: err.message, stack: err.stack })
           if (cancelled) return
           setStatus('error')
           setErrorMsg(err.message || 'Connection error')
         })
         connection.on('close', () => {
+          reportLog({ event: 'sdk-close' })
           if (!cancelled) setStatus('closed')
         })
         connection.on('message', (data) => {
@@ -101,7 +114,11 @@ export default function HobsonVoiceAgent({ onClose }) {
           if (data.type === 'AgentStartedSpeaking') setStatus('speaking')
           if (data.type === 'UserStartedSpeaking') setStatus('listening')
           if (data.type === 'AgentAudioDone') setStatus('listening')
-          if (data.type === 'Error') { setStatus('error'); setErrorMsg(data.description || 'Agent error') }
+          if (data.type === 'Error') {
+            reportLog({ event: 'agent-error-message', data })
+            setStatus('error')
+            setErrorMsg(data.description || 'Agent error')
+          }
         })
 
         // The SDK's built-in 'message' handler JSON-parses every frame, which breaks on
@@ -112,6 +129,11 @@ export default function HobsonVoiceAgent({ onClose }) {
           if (event.data instanceof ArrayBuffer) playAudioChunk(event.data)
           else if (event.data instanceof Blob) event.data.arrayBuffer().then((buf) => { if (!cancelled) playAudioChunk(buf) })
         })
+        // Raw close event has the actual WebSocket close code/reason Deepgram sent,
+        // which the SDK's own 'close' event doesn't surface.
+        connection.socket.addEventListener('close', (event) => {
+          reportLog({ event: 'raw-socket-close', code: event.code, reason: event.reason, wasClean: event.wasClean })
+        })
 
         connection.connect()
         await connection.waitForOpen()
@@ -121,6 +143,7 @@ export default function HobsonVoiceAgent({ onClose }) {
         await startMic(connection)
         if (!cancelled) setStatus('listening')
       } catch (e) {
+        reportLog({ event: 'start-exception', message: e.message, stack: e.stack })
         if (!cancelled) { setStatus('error'); setErrorMsg(e.message || 'Could not start voice session') }
       }
     }
