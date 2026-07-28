@@ -698,6 +698,7 @@ async function handleRoute(request, { params }) {
         const grant = await dg.auth.v1.tokens.grant({ ttl_seconds: 3600 })
         return handleCORS(NextResponse.json(grant))
       } catch (e) {
+        console.error('voice-agent-token grant failed:', e.message, e.body || '')
         return handleCORS(NextResponse.json({ error: e.message }, { status: 500 }))
       }
     }
