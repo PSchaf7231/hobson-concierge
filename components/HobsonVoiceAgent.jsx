@@ -46,7 +46,7 @@ const SETTINGS_MESSAGE = {
   agent: {
     language: 'en',
     speak: { provider: { type: 'deepgram', model: 'aura-2-draco-en' } },
-    listen: { provider: { type: 'deepgram', model: 'flux-general-en' }, keyterms: KEYTERMS },
+    listen: { provider: { type: 'deepgram', model: 'flux-general-en', keyterms: KEYTERMS } },
     think: { provider: { type: 'anthropic', model: 'claude-sonnet-5' }, prompt: HOBSON_PROMPT },
     greeting: 'Good day. This is Hobson. How may I be of service today?',
   },
