@@ -703,19 +703,6 @@ async function handleRoute(request, { params }) {
       }
     }
 
-    // ============= TEMP DIAGNOSTIC — list Deepgram's actually-available think models for this account =============
-    if (route === '/voice-agent-debug-models' && method === 'GET') {
-      const dgKey = process.env.DEEPGRAM_API_KEY
-      if (!dgKey) return handleCORS(NextResponse.json({ error: 'Deepgram not configured' }, { status: 400 }))
-      try {
-        const dg = new DeepgramClient({ apiKey: dgKey })
-        const models = await dg.agent.v1.settings.think.models.list()
-        return handleCORS(NextResponse.json(models))
-      } catch (e) {
-        return handleCORS(NextResponse.json({ error: e.message, body: e.body || null }, { status: 500 }))
-      }
-    }
-
     // ============= VOICE AGENT LOG — client-side diagnostics for the live voice call =============
     if (route === '/voice-agent-log' && method === 'POST') {
       const body = await request.json().catch(() => ({}))
