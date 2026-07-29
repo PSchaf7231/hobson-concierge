@@ -99,23 +99,33 @@ export default function HobsonVoiceAgent({ onClose }) {
         const connection = await dg.agent.v1.connect({ Authorization: `Bearer ${tokenData.access_token}` })
         connectionRef.current = connection
 
+        // Deepgram rejects any mic audio sent before it confirms our Settings
+        // message was applied ("Received binary message before Settings") — so
+        // mic startup below waits on this instead of firing right after sendSettings.
+        let settingsApplied
+        const settingsAppliedPromise = new Promise((resolve) => { settingsApplied = resolve })
+
         connection.on('error', (err) => {
           reportLog({ event: 'sdk-error', message: err.message, stack: err.stack })
+          settingsApplied()
           if (cancelled) return
           setStatus('error')
           setErrorMsg(err.message || 'Connection error')
         })
         connection.on('close', () => {
           reportLog({ event: 'sdk-close' })
+          settingsApplied()
           if (!cancelled) setStatus('closed')
         })
         connection.on('message', (data) => {
           if (cancelled || !data || typeof data !== 'object') return
+          if (data.type === 'SettingsApplied') settingsApplied()
           if (data.type === 'AgentStartedSpeaking') setStatus('speaking')
           if (data.type === 'UserStartedSpeaking') setStatus('listening')
           if (data.type === 'AgentAudioDone') setStatus('listening')
           if (data.type === 'Error') {
             reportLog({ event: 'agent-error-message', data })
+            settingsApplied()
             setStatus('error')
             setErrorMsg(data.description || 'Agent error')
           }
@@ -139,6 +149,9 @@ export default function HobsonVoiceAgent({ onClose }) {
         await connection.waitForOpen()
         if (cancelled) return
         connection.sendSettings(SETTINGS_MESSAGE)
+
+        await settingsAppliedPromise
+        if (cancelled || connection.socket?.readyState !== WebSocket.OPEN) return
 
         await startMic(connection)
         if (!cancelled) setStatus('listening')
