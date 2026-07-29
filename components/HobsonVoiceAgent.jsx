@@ -128,9 +128,11 @@ export default function HobsonVoiceAgent({ onClose }) {
         })
         connection.on('message', (data) => {
           if (cancelled || !data || typeof data !== 'object') return
-          // TEMP DIAGNOSTIC: log every message type Deepgram sends, to see whether it
+          // TEMP DIAGNOSTIC: log every full message Deepgram sends, to see whether it
           // ever attempts to greet/speak at all, or gets stuck silently after Settings.
-          reportLog({ event: 'agent-message-type', type: data.type })
+          // A prior version only logged data.type, which showed up blank — need the
+          // full payload to tell whether this is a real Deepgram message at all.
+          try { reportLog({ event: 'agent-message-full', data: JSON.parse(JSON.stringify(data)) }) } catch (e) { reportLog({ event: 'agent-message-unstringifiable', keys: Object.keys(data || {}) }) }
           if (data.type === 'SettingsApplied') settingsApplied()
           if (data.type === 'AgentStartedSpeaking') setStatus('speaking')
           if (data.type === 'UserStartedSpeaking') setStatus('listening')
