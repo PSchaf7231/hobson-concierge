@@ -179,10 +179,57 @@ function PropertyCard({ p, index = 0, isFavorite = false, onToggleFavorite }) {
   )
 }
 
+// Short spoken intro for a property — the sentence Hobson says out loud
+// the moment someone clicks into a listing, not a full read of every field.
+function buildBlurb(p) {
+  const addr = p.address || `this home in ${p.city || 'Palm Beach County'}, ${p.state || 'FL'}`
+  const specs = []
+  if (p.beds) specs.push(`${p.beds} bed${p.beds === 1 ? '' : 's'}`)
+  if (p.baths) specs.push(`${p.baths} bath${p.baths === 1 ? '' : 's'}`)
+  const specLine = specs.length ? ` It's a ${specs.join(', ')}` + (p.sqft ? `, just over ${Math.round(p.sqft / 100) * 100} square feet.` : '.') : ''
+  const price = p.price ? ` Listed at ${fullMoney(p.price)}.` : ''
+  const teaser = p.description ? ` ${p.description.split('.')[0].trim()}.` : ''
+  return `Here's ${addr}.${price}${specLine}${teaser}`
+}
+
 function PropertyDetailModal({ p, index = 0, onClose }) {
   const gallery = (p.images && p.images.length ? p.images : [p.heroImage || p.image]).filter(Boolean)
   const photos = gallery.length ? gallery : [IDLE_IMAGES[index % IDLE_IMAGES.length]]
   const [photoIdx, setPhotoIdx] = useState(0)
+  const [speaking, setSpeaking] = useState(false)
+  const audioRef = useRef(null)
+
+  // Trigger: clicking into a property is what makes Hobson talk about it —
+  // no separate voice-search step needed for this.
+  useEffect(() => {
+    let cancelled = false
+    async function speak() {
+      try {
+        const res = await fetch('/api/voice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: buildBlurb(p) })
+        })
+        if (!res.ok || cancelled) return
+        const blob = await res.blob()
+        if (cancelled) return
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audioRef.current = audio
+        audio.onplay = () => { if (!cancelled) setSpeaking(true) }
+        audio.onended = () => { setSpeaking(false); URL.revokeObjectURL(url) }
+        audio.onerror = () => setSpeaking(false)
+        await audio.play()
+      } catch (e) { setSpeaking(false) }
+    }
+    speak()
+    return () => {
+      cancelled = true
+      try { audioRef.current?.pause() } catch (e) {}
+      audioRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.id || p.listingId])
 
   useEffect(() => {
     function onKey(e) {
@@ -223,6 +270,12 @@ function PropertyDetailModal({ p, index = 0, onClose }) {
             alt={p.address || p.title || 'Property'}
             className="w-full h-full object-cover"
           />
+          {speaking && (
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0A1628]/80 border border-[#D4AF37]/40 text-[#D4AF37] text-[9px] uppercase tracking-[0.24em] backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
+              Hobson speaking
+            </div>
+          )}
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onClose() }}
