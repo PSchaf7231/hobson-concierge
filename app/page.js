@@ -686,10 +686,11 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
           action in this layout; chat/Hobson are secondary tools below it. */}
       <div className="flex-shrink-0 px-5 pb-3">
         <div className="rounded-xl border border-[#D4AF37]/25 p-3" style={{ background: 'rgba(212, 175, 55, 0.04)' }}>
-          <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center justify-between mb-1.5">
             <div className="text-[9px] uppercase tracking-[0.26em] text-[#D4AF37] font-semibold">Search</div>
             {recommended.length > 0 && <div className="text-[9px] text-[#F5EDE0]/50">{recommended.length} shown</div>}
           </div>
+          <div className="text-[#F5EDE0]/60 text-[11px] mb-2.5">Please type what you're looking for or use the filter boxes.</div>
 
           <div className="space-y-2">
             <input value={filters.location} onChange={e => setFilters(f => ({...f, location: e.target.value}))} placeholder="City, Zip, or Neighborhood" className="w-full h-8 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:outline-none text-[#F5EDE0] text-[11px] px-2.5" />
