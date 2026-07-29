@@ -47,7 +47,7 @@ const SETTINGS_MESSAGE = {
     language: 'en',
     speak: { provider: { type: 'deepgram', model: 'aura-2-draco-en' } },
     listen: { provider: { type: 'deepgram', model: 'flux-general-en', keyterms: KEYTERMS } },
-    think: { provider: { type: 'anthropic', model: 'claude-sonnet-4-20250514' }, prompt: HOBSON_PROMPT },
+    think: { provider: { type: 'anthropic', model: 'claude-sonnet-5' }, prompt: HOBSON_PROMPT },
     greeting: 'Good day. This is Hobson. How may I be of service today?',
   },
 }
@@ -96,15 +96,14 @@ export default function HobsonVoiceAgent({ onClose }) {
 
         const { DeepgramClient } = await import('@deepgram/sdk')
         const dg = new DeepgramClient({ accessToken: tokenData.access_token })
-        // Browsers can't send a custom Authorization header on a WebSocket handshake, so the
-        // SDK's Authorization option silently gets dropped client-side — the connection was
-        // going out completely unauthenticated. Deepgram's browser-compatible auth path is the
-        // Sec-WebSocket-Protocol header instead, via the `protocols` field (browsers do send
-        // that one for real). reconnectAttempts: 0 stops the SDK's silent auto-reconnect, which
-        // was re-streaming mic audio into fresh, never-re-authenticated sockets on every drop.
+        // The SDK already converts the Authorization header into the browser-compatible
+        // Sec-WebSocket-Protocol form on its own (browsers can't send custom headers on a
+        // WebSocket handshake) — passing `protocols` here too duplicated it and browsers
+        // reject a WebSocket with the same subprotocol listed twice. reconnectAttempts: 0
+        // stops the SDK's silent auto-reconnect, which was re-streaming mic audio into fresh,
+        // never-re-authenticated sockets on every drop.
         const connection = await dg.agent.v1.connect({
           Authorization: `Bearer ${tokenData.access_token}`,
-          protocols: ['bearer', tokenData.access_token],
           reconnectAttempts: 0,
         })
         connectionRef.current = connection
