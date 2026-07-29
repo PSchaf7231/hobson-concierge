@@ -128,6 +128,9 @@ export default function HobsonVoiceAgent({ onClose }) {
         })
         connection.on('message', (data) => {
           if (cancelled || !data || typeof data !== 'object') return
+          // TEMP DIAGNOSTIC: log every message type Deepgram sends, to see whether it
+          // ever attempts to greet/speak at all, or gets stuck silently after Settings.
+          reportLog({ event: 'agent-message-type', type: data.type })
           if (data.type === 'SettingsApplied') settingsApplied()
           if (data.type === 'AgentStartedSpeaking') setStatus('speaking')
           if (data.type === 'UserStartedSpeaking') setStatus('listening')
@@ -143,10 +146,16 @@ export default function HobsonVoiceAgent({ onClose }) {
         // The SDK's built-in 'message' handler JSON-parses every frame, which breaks on
         // the binary audio frames the agent sends back — so we listen for those directly
         // on the underlying socket instead, ourselves, to actually play Hobson's voice.
+        let loggedFirstAudioChunk = false
         connection.socket.addEventListener('message', (event) => {
           if (cancelled) return
-          if (event.data instanceof ArrayBuffer) playAudioChunk(event.data)
-          else if (event.data instanceof Blob) event.data.arrayBuffer().then((buf) => { if (!cancelled) playAudioChunk(buf) })
+          if (event.data instanceof ArrayBuffer) {
+            if (!loggedFirstAudioChunk) { loggedFirstAudioChunk = true; reportLog({ event: 'first-audio-chunk', bytes: event.data.byteLength }) }
+            playAudioChunk(event.data)
+          } else if (event.data instanceof Blob) {
+            if (!loggedFirstAudioChunk) { loggedFirstAudioChunk = true; reportLog({ event: 'first-audio-chunk-blob', bytes: event.data.size }) }
+            event.data.arrayBuffer().then((buf) => { if (!cancelled) playAudioChunk(buf) })
+          }
         })
         // Raw close event has the actual WebSocket close code/reason Deepgram sent,
         // which the SDK's own 'close' event doesn't surface.
