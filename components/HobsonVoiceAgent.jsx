@@ -81,6 +81,7 @@ export default function HobsonVoiceAgent({ onClose }) {
   const outputCtxRef = useRef(null)
   const playheadRef = useRef(0)
   const stoppedRef = useRef(false)
+  const loggedTypesRef = useRef(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -128,11 +129,15 @@ export default function HobsonVoiceAgent({ onClose }) {
         })
         connection.on('message', (data) => {
           if (cancelled || !data || typeof data !== 'object') return
-          // TEMP DIAGNOSTIC: log every full message Deepgram sends, to see whether it
-          // ever attempts to greet/speak at all, or gets stuck silently after Settings.
-          // A prior version only logged data.type, which showed up blank — need the
-          // full payload to tell whether this is a real Deepgram message at all.
-          try { reportLog({ event: 'agent-message-full', data: JSON.parse(JSON.stringify(data)) }) } catch (e) { reportLog({ event: 'agent-message-unstringifiable', keys: Object.keys(data || {}) }) }
+          // TEMP DIAGNOSTIC, throttled: log each distinct message type only once per call.
+          // An earlier version logged unconditionally and flooded the browser — a blank-type
+          // message was firing at audio-frame frequency (the SDK's JSON message handler
+          // choking on the binary audio frames), producing hundreds of requests/sec.
+          if (!data.type) return
+          if (!loggedTypesRef.current.has(data.type)) {
+            loggedTypesRef.current.add(data.type)
+            try { reportLog({ event: 'agent-message-full', data: JSON.parse(JSON.stringify(data)) }) } catch (e) { reportLog({ event: 'agent-message-unstringifiable', keys: Object.keys(data || {}) }) }
+          }
           if (data.type === 'SettingsApplied') settingsApplied()
           if (data.type === 'AgentStartedSpeaking') setStatus('speaking')
           if (data.type === 'UserStartedSpeaking') setStatus('listening')
