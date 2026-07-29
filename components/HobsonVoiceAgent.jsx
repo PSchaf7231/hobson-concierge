@@ -96,7 +96,17 @@ export default function HobsonVoiceAgent({ onClose }) {
 
         const { DeepgramClient } = await import('@deepgram/sdk')
         const dg = new DeepgramClient({ accessToken: tokenData.access_token })
-        const connection = await dg.agent.v1.connect({ Authorization: `Bearer ${tokenData.access_token}` })
+        // Browsers can't send a custom Authorization header on a WebSocket handshake, so the
+        // SDK's Authorization option silently gets dropped client-side — the connection was
+        // going out completely unauthenticated. Deepgram's browser-compatible auth path is the
+        // Sec-WebSocket-Protocol header instead, via the `protocols` field (browsers do send
+        // that one for real). reconnectAttempts: 0 stops the SDK's silent auto-reconnect, which
+        // was re-streaming mic audio into fresh, never-re-authenticated sockets on every drop.
+        const connection = await dg.agent.v1.connect({
+          Authorization: `Bearer ${tokenData.access_token}`,
+          protocols: ['bearer', tokenData.access_token],
+          reconnectAttempts: 0,
+        })
         connectionRef.current = connection
 
         // Deepgram rejects any mic audio sent before it confirms our Settings
