@@ -335,7 +335,6 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
   const [orbSpeaking, setOrbSpeaking] = useState(false)
   const [leadCaptured, setLeadCaptured] = useState(false)
   const [captureOpen, setCaptureOpen] = useState(false)
-  const [liveCallOpen, setLiveCallOpen] = useState(false)
   const audioRef = useRef(null)
   const recognitionRef = useRef(null)
   const wantListeningRef = useRef(false)
@@ -862,7 +861,9 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
           </div>
 
           {/* Starter chips — live in the fixed bottom area (not the scrollable
-              history above) so they stay visible instead of scrolling away. */}
+              history above) so they stay visible instead of scrolling away.
+              The live-call trigger now lives in the sitewide gold bar instead
+              of here, since it shouldn't disappear once chatting starts. */}
           {messages.length === 0 && !loading && (
             <div className="flex flex-wrap gap-2 px-3 pt-3 flex-shrink-0">
               {starterChips.map((chip) => (
@@ -870,15 +871,11 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
                   {chip}
                 </button>
               ))}
-              <button onClick={() => setLiveCallOpen(true)} className="text-xs px-3 py-1.5 rounded-full border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] transition inline-flex items-center gap-1.5">
-                <Volume2 className="h-3 w-3" /> Talk to Hobson live
-              </button>
             </div>
           )}
 
           {/* Input row — anchored at the bottom of the same box */}
           <div className="border-t border-[#D4AF37]/20 flex items-start gap-2 p-3 flex-shrink-0">
-            {liveCallOpen && <HobsonVoiceAgent onClose={() => setLiveCallOpen(false)} />}
             <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder="Tell Hobson what you're looking for…" rows={3} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-2 transition resize-none leading-relaxed" disabled={loading} />
             <button onClick={() => send()} disabled={loading || !input.trim()} className="h-10 w-10 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
               <Send className="h-4 w-4" />
@@ -1151,6 +1148,13 @@ function App() {
           <InlineLeadCapture />
         </div>
       </header>
+
+      {/* Sitewide gold bar — the one, persistent way to start a live voice
+          conversation with Hobson. Always visible (not tied to chat state or
+          scroll position) and not about property search — general conversation. */}
+      <div className="flex-shrink-0">
+        <HobsonVoiceAgent />
+      </div>
 
       {/* MAIN: true 50/50 split w/ gold vertical divider (or full-width admin) */}
       {tab === 'admin' && isAdmin ? (
