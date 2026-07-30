@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Mic } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { X } from 'lucide-react'
+
+const HobsonOrb = dynamic(() => import('@/components/HobsonOrb'), { ssr: false })
 
 // Live, real-time conversational voice agent — distinct from the dictate-then-TTS
 // mic button elsewhere in the app. Vapi's Web SDK handles the mic capture, audio
@@ -57,14 +60,14 @@ export default function HobsonVoiceAgent({ onClose }) {
     closed: 'Call ended',
   }[status]
 
+  const orbState = { connecting: 'thinking', listening: 'listening', speaking: 'speaking', error: 'idle', closed: 'idle' }[status] || 'idle'
+
   return (
     <div className="fixed inset-0 z-50 bg-[#0A1628]/95 flex flex-col items-center justify-center gap-6 px-6">
       <button onClick={onClose} className="absolute top-6 right-6 text-[#D4AF37]/70 hover:text-[#D4AF37]" aria-label="End call">
         <X className="h-6 w-6" />
       </button>
-      <div className={`h-24 w-24 rounded-full flex items-center justify-center border-2 ${status === 'error' ? 'border-red-400' : 'border-[#D4AF37]'} ${status === 'speaking' || status === 'listening' ? 'animate-pulse' : ''}`}>
-        <Mic className={`h-9 w-9 ${status === 'error' ? 'text-red-400' : 'text-[#D4AF37]'}`} />
-      </div>
+      <HobsonOrb size={180} state={orbState} />
       <div className="text-[#F5EDE0] text-sm tracking-wide text-center max-w-sm">{label}</div>
       {status === 'error' && (
         <button onClick={onClose} className="text-[#D4AF37] text-xs underline underline-offset-4">Close</button>
