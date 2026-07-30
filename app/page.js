@@ -826,21 +826,9 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
           {/* Scrollable message history — scrollbar is INSIDE this box */}
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4 hobson-scroll">
             {messages.length === 0 && !loading && (
-              <div className="space-y-4">
-                <div className="space-y-1 max-w-full">
-                  <div className="text-[9px] uppercase tracking-[0.28em] text-[#D4AF37]/80 font-medium">Hobson</div>
-                  <div style={{ fontFamily: SERIF }} className="text-[#F5EDE0] text-[1.05rem] leading-relaxed whitespace-pre-wrap">{greeting}</div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {starterChips.map((chip) => (
-                    <button key={chip} onClick={() => send(chip)} className="text-xs px-3 py-1.5 rounded-full border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] transition">
-                      {chip}
-                    </button>
-                  ))}
-                  <button onClick={() => setLiveCallOpen(true)} className="text-xs px-3 py-1.5 rounded-full border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] transition inline-flex items-center gap-1.5">
-                    <Volume2 className="h-3 w-3" /> Talk to Hobson live
-                  </button>
-                </div>
+              <div className="space-y-1 max-w-full">
+                <div className="text-[9px] uppercase tracking-[0.28em] text-[#D4AF37]/80 font-medium">Hobson</div>
+                <div style={{ fontFamily: SERIF }} className="text-[#F5EDE0] text-[1.05rem] leading-relaxed whitespace-pre-wrap">{greeting}</div>
               </div>
             )}
             {messages.map((m, i) => (
@@ -873,11 +861,23 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
             )}
           </div>
 
+          {/* Starter chips — live in the fixed bottom area (not the scrollable
+              history above) so they stay visible instead of scrolling away. */}
+          {messages.length === 0 && !loading && (
+            <div className="flex flex-wrap gap-2 px-3 pt-3 flex-shrink-0">
+              {starterChips.map((chip) => (
+                <button key={chip} onClick={() => send(chip)} className="text-xs px-3 py-1.5 rounded-full border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] transition">
+                  {chip}
+                </button>
+              ))}
+              <button onClick={() => setLiveCallOpen(true)} className="text-xs px-3 py-1.5 rounded-full border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] transition inline-flex items-center gap-1.5">
+                <Volume2 className="h-3 w-3" /> Talk to Hobson live
+              </button>
+            </div>
+          )}
+
           {/* Input row — anchored at the bottom of the same box */}
           <div className="border-t border-[#D4AF37]/20 flex items-start gap-2 p-3 flex-shrink-0">
-            <button onClick={() => setLiveCallOpen(true)} className="h-10 w-10 rounded-full flex items-center justify-center transition flex-shrink-0 mt-1 border border-[#D4AF37]/30 hover:border-[#D4AF37] text-[#D4AF37]" aria-label="live call with Hobson" title="Talk live with Hobson">
-              <Volume2 className="h-4 w-4" />
-            </button>
             {liveCallOpen && <HobsonVoiceAgent onClose={() => setLiveCallOpen(false)} />}
             <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder="Tell Hobson what you're looking for…" rows={3} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-2 transition resize-none leading-relaxed" disabled={loading} />
             <button onClick={() => send()} disabled={loading || !input.trim()} className="h-10 w-10 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
