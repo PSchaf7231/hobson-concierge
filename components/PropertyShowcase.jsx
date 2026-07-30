@@ -250,7 +250,6 @@ function PropertyDetailModal({ p, index = 0, onClose }) {
   ].filter(s => s.value !== '—' || ['Beds', 'Baths', 'SqFt'].includes(s.label))
 
   const isCommercial = p.type === 'commercial'
-  const agentLine = [p.agent, p.office].filter(Boolean).join(' · ')
 
   return (
     <div
@@ -359,11 +358,8 @@ function PropertyDetailModal({ p, index = 0, onClose }) {
             </div>
           )}
 
-          {/* Contact — "Contact Paul" is the primary, prominent action. The
-              listing-agent attribution (required for MLS-sourced listings)
-              is kept but styled as a small disclosure line, not co-equal
-              billing with Paul's own contact info. */}
-          <div className="mt-6 pt-5 border-t border-[#D4AF37]/15 flex flex-col items-end gap-1.5">
+          {/* Contact */}
+          <div className="mt-6 pt-5 border-t border-[#D4AF37]/15 flex justify-end">
             <a
               href="tel:+15612557285"
               className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
@@ -371,11 +367,6 @@ function PropertyDetailModal({ p, index = 0, onClose }) {
             >
               Contact Paul · 561-255-7285
             </a>
-            {agentLine && (
-              <div className="text-[#95A3B8]/45 text-[9px]">
-                Listing courtesy of {agentLine}
-              </div>
-            )}
           </div>
         </div>
       </div>
