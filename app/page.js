@@ -860,10 +860,12 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
             )}
           </div>
 
-          {/* Input row — anchored at the bottom of the same box */}
-          <div className="border-t border-[#D4AF37]/20 flex items-start gap-2 p-3 flex-shrink-0">
-            <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder="Tell Hobson what you're looking for…" rows={3} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-2 transition resize-none leading-relaxed" disabled={loading} />
-            <button onClick={() => send()} disabled={loading || !input.trim()} className="h-10 w-10 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0 mt-1">
+          {/* Input row — anchored at the bottom of the same box. Kept short
+              (2 rows) — typed messages here are rarely more than a
+              sentence, so this shouldn't eat space the history area needs. */}
+          <div className="border-t border-[#D4AF37]/20 flex items-start gap-2 px-3 py-2 flex-shrink-0">
+            <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder="Tell Hobson what you're looking for…" rows={2} className="flex-1 bg-transparent border-0 focus:outline-none text-[#F5EDE0] placeholder-[#F5EDE0]/40 text-sm px-2 py-1.5 transition resize-none leading-relaxed" disabled={loading} />
+            <button onClick={() => send()} disabled={loading || !input.trim()} className="h-9 w-9 rounded-full bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] flex items-center justify-center transition flex-shrink-0">
               <Send className="h-4 w-4" />
             </button>
           </div>
@@ -872,9 +874,9 @@ function ChatPanel({ onProperties, onViewCountUpdate, onFavoritesChange }) {
               so they never squeeze the greeting text in the scrollable area
               above. Gone once the conversation starts. */}
           {messages.length === 0 && !loading && (
-            <div className="flex flex-wrap gap-2 px-3 pb-3 flex-shrink-0">
+            <div className="flex flex-wrap gap-1.5 px-3 pb-2 flex-shrink-0">
               {starterChips.map((chip) => (
-                <button key={chip} onClick={() => send(chip)} className="text-xs px-3 py-1.5 rounded-full border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] transition">
+                <button key={chip} onClick={() => send(chip)} className="text-xs px-3 py-1 rounded-full border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] transition">
                   {chip}
                 </button>
               ))}
