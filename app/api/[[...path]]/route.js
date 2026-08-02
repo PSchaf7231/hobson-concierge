@@ -1324,6 +1324,73 @@ async function handleRoute(request, { params }) {
       return handleCORS(NextResponse.json(rest))
     }
 
+    // ============= HUB — Paul's private internal ops dashboard (not part of the public site) =============
+    if (route.startsWith('/hub/')) {
+      const hubPassword = process.env.HUB_PASSWORD
+      if (!hubPassword) {
+        return handleCORS(NextResponse.json({ error: 'Hub is not configured (set HUB_PASSWORD)' }, { status: 503 }))
+      }
+
+      if (route === '/hub/auth' && method === 'POST') {
+        const body = await request.json()
+        const ok = body.password && body.password === hubPassword
+        return handleCORS(NextResponse.json({ ok: !!ok }, { status: ok ? 200 : 401 }))
+      }
+
+      // Everything below requires the shared hub key on every request
+      const key = request.headers.get('x-hub-key')
+      if (key !== hubPassword) {
+        return handleCORS(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+      }
+
+      if (route === '/hub/entries' && method === 'GET') {
+        const tile = new URL(request.url).searchParams.get('tile')
+        const query = tile ? { tile } : {}
+        const entries = await db.collection('hub_entries').find(query).sort({ createdAt: 1 }).toArray()
+        return handleCORS(NextResponse.json(entries.map(({ _id, ...e }) => e)))
+      }
+
+      if (route === '/hub/entries' && method === 'POST') {
+        const body = await request.json()
+        const tile = (body.tile || '').toString().trim()
+        const name = (body.name || '').toString().trim()
+        if (!tile || !name) return handleCORS(NextResponse.json({ error: 'tile and name required' }, { status: 400 }))
+        const entry = {
+          id: uuidv4(),
+          tile,
+          name,
+          notes: (body.notes || '').toString(),
+          link: (body.link || '').toString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+        await db.collection('hub_entries').insertOne(entry)
+        const { _id, ...rest } = entry
+        return handleCORS(NextResponse.json(rest))
+      }
+
+      const hubEntryMatch = route.match(/^\/hub\/entries\/([^/]+)$/)
+      if (hubEntryMatch && method === 'PUT') {
+        const id = hubEntryMatch[1]
+        const body = await request.json()
+        const patch = { updatedAt: new Date().toISOString() }
+        for (const f of ['name', 'notes', 'link']) {
+          if (typeof body[f] === 'string') patch[f] = body[f]
+        }
+        await db.collection('hub_entries').updateOne({ id }, { $set: patch })
+        const updated = await db.collection('hub_entries').findOne({ id })
+        if (!updated) return handleCORS(NextResponse.json({ error: 'not found' }, { status: 404 }))
+        const { _id, ...rest } = updated
+        return handleCORS(NextResponse.json(rest))
+      }
+
+      if (hubEntryMatch && method === 'DELETE') {
+        const id = hubEntryMatch[1]
+        await db.collection('hub_entries').deleteOne({ id })
+        return handleCORS(NextResponse.json({ ok: true }))
+      }
+    }
+
     return handleCORS(NextResponse.json({ error: `Route ${route} not found` }, { status: 404 }))
   } catch (err) {
     console.error('API error:', err)
