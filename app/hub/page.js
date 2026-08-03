@@ -263,21 +263,21 @@ export default function HubPage() {
   return (
     <div className="min-h-screen" style={{ background: NAVY }}>
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-20 h-[45px] rounded-md overflow-hidden border shrink-0" style={{ borderColor: `${GOLD}40`, background: '#0B1526' }}>
-              <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-                <source src="/hobson-avatar.mp4" type="video/mp4" />
-              </video>
-            </div>
-            <h1 className="text-2xl font-semibold truncate" style={{ color: GOLD }}>Hobson Hub</h1>
-          </div>
+        <div className="flex justify-end mb-2">
           <button
-            className="text-sm text-white/50 hover:text-white/80 shrink-0"
+            className="text-sm text-white/50 hover:text-white/80"
             onClick={() => { localStorage.removeItem('hub_key'); setHubKey(null) }}
           >
             Lock
           </button>
+        </div>
+        <div className="mb-8">
+          <div className="w-full max-w-xs rounded-xl overflow-hidden border shadow-lg aspect-video mb-4" style={{ borderColor: `${GOLD}40`, background: '#0B1526' }}>
+            <video autoPlay loop muted playsInline className="w-full h-full object-cover">
+              <source src="/hobson-avatar.mp4" type="video/mp4" />
+            </video>
+          </div>
+          <h1 className="text-2xl font-semibold" style={{ color: GOLD }}>Hobson Hub</h1>
         </div>
 
         <div className="relative mb-8">
