@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   CalendarClock, FileText, StickyNote, Contact, FolderLock, User,
   Home, Megaphone, Image as ImageIcon, Users, FileSignature, LineChart,
-  Plus, Trash2, ExternalLink, Lock, X, Search
+  Plus, Trash2, ExternalLink, Lock, X, Search, Play, Pause
 } from 'lucide-react'
 
 const NAVY = '#0A1628'
@@ -232,6 +232,7 @@ export default function HubPage() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
   const [searching, setSearching] = useState(false)
+  const [videoPlaying, setVideoPlaying] = useState(true)
 
   useEffect(() => {
     const saved = localStorage.getItem('hub_key')
@@ -272,10 +273,32 @@ export default function HubPage() {
           </button>
         </div>
         <div className="mb-8">
-          <div className="w-full max-w-xs rounded-xl overflow-hidden border shadow-lg aspect-video mb-4" style={{ borderColor: `${GOLD}40`, background: '#0B1526' }}>
-            <video autoPlay loop muted playsInline className="w-full h-full object-cover">
+          <div className="relative w-full max-w-xs rounded-xl overflow-hidden border shadow-lg aspect-video mb-4" style={{ borderColor: `${GOLD}40`, background: '#0B1526' }}>
+            <video
+              ref={(el) => { if (el) window.__hubVideo = el }}
+              autoPlay
+              loop
+              muted
+              playsInline
+              onPlay={() => setVideoPlaying(true)}
+              onPause={() => setVideoPlaying(false)}
+              className="w-full h-full object-cover"
+            >
               <source src="/hobson-avatar.mp4" type="video/mp4" />
             </video>
+            <button
+              onClick={() => {
+                const v = window.__hubVideo
+                if (!v) return
+                v.muted = false
+                if (v.paused) v.play(); else v.pause()
+              }}
+              title={videoPlaying ? 'Mute/unmute Hobson' : 'Play Hobson'}
+              aria-label={videoPlaying ? 'Mute/unmute Hobson' : 'Play Hobson'}
+              className="absolute top-2 right-2 z-10 h-7 w-7 rounded-full bg-[#0A1628]/80 hover:bg-[#0A1628] backdrop-blur-sm border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center transition"
+            >
+              {videoPlaying ? <Pause className="h-3.5 w-3.5" fill="currentColor" /> : <Play className="h-3.5 w-3.5" fill="currentColor" />}
+            </button>
           </div>
           <h1 className="text-2xl font-semibold" style={{ color: GOLD }}>Hobson Hub</h1>
         </div>
