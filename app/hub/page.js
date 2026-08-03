@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   CalendarClock, FileText, StickyNote, Contact, FolderLock, User,
   Home, Megaphone, Image as ImageIcon, Users, FileSignature, LineChart,
-  Plus, Trash2, ExternalLink, Lock, X
+  Plus, Trash2, ExternalLink, Lock, X, Search
 } from 'lucide-react'
 
 const NAVY = '#0A1628'
@@ -139,7 +139,7 @@ function EntryDialog({ open, onClose, tile, entry, onSave }) {
   )
 }
 
-function TilePanel({ tile, hubKey, onClose }) {
+function TilePanel({ tile, hubKey, onClose, openEntryId }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -148,8 +148,13 @@ function TilePanel({ tile, hubKey, onClose }) {
   async function load() {
     setLoading(true)
     const res = await fetch(`/api/hub/entries?tile=${tile.key}`, { headers: authHeaders(hubKey) })
-    setEntries(res.ok ? await res.json() : [])
+    const data = res.ok ? await res.json() : []
+    setEntries(data)
     setLoading(false)
+    if (openEntryId) {
+      const match = data.find((e) => e.id === openEntryId)
+      if (match) { setEditing(match); setDialogOpen(true) }
+    }
   }
 
   useEffect(() => { load() }, [tile.key])
@@ -216,16 +221,44 @@ function TilePanel({ tile, hubKey, onClose }) {
   )
 }
 
+function TileByKey(key) {
+  return TILES.find((t) => t.key === key)
+}
+
 export default function HubPage() {
   const [hubKey, setHubKey] = useState(null)
   const [activeTile, setActiveTile] = useState(null)
+  const [openEntryId, setOpenEntryId] = useState(null)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState(null)
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('hub_key')
     if (saved) setHubKey(saved)
   }, [])
 
+  useEffect(() => {
+    if (!hubKey) return
+    const q = query.trim()
+    if (!q) { setResults(null); return }
+    setSearching(true)
+    const t = setTimeout(async () => {
+      const res = await fetch(`/api/hub/entries?q=${encodeURIComponent(q)}`, { headers: authHeaders(hubKey) })
+      setResults(res.ok ? await res.json() : [])
+      setSearching(false)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [query, hubKey])
+
   if (!hubKey) return <PasswordGate onUnlock={setHubKey} />
+
+  function openResult(entry) {
+    setOpenEntryId(entry.id)
+    setActiveTile(TileByKey(entry.tile))
+    setQuery('')
+    setResults(null)
+  }
 
   return (
     <div className="min-h-screen" style={{ background: NAVY }}>
@@ -239,13 +272,45 @@ export default function HubPage() {
             Lock
           </button>
         </div>
+
+        <div className="relative mb-8">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search every tile — name, notes, or link…"
+            className="pl-10 bg-white/95"
+          />
+          {query.trim() && (
+            <div className="absolute z-10 mt-2 w-full rounded-lg border border-stone-200 bg-white shadow-lg max-h-80 overflow-y-auto">
+              {searching && <p className="p-3 text-sm text-stone-500">Searching…</p>}
+              {!searching && results?.length === 0 && (
+                <p className="p-3 text-sm text-stone-500">No matches.</p>
+              )}
+              {!searching && results?.map((e) => {
+                const t = TileByKey(e.tile)
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => openResult(e)}
+                    className="w-full text-left p-3 hover:bg-stone-50 border-b border-stone-100 last:border-0"
+                  >
+                    <p className="text-sm font-medium" style={{ color: NAVY }}>{e.name}</p>
+                    <p className="text-xs text-stone-500">{t?.label || e.tile}</p>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {TILES.map((tile) => {
             const Icon = tile.icon
             return (
               <Card
                 key={tile.key}
-                onClick={() => setActiveTile(tile)}
+                onClick={() => { setOpenEntryId(null); setActiveTile(tile) }}
                 className="cursor-pointer p-5 flex flex-col items-center gap-2 text-center hover:-translate-y-0.5 transition-transform bg-white/95"
               >
                 <Icon className="h-6 w-6" style={{ color: GOLD }} />
@@ -257,7 +322,12 @@ export default function HubPage() {
       </div>
 
       {activeTile && (
-        <TilePanel tile={activeTile} hubKey={hubKey} onClose={() => setActiveTile(null)} />
+        <TilePanel
+          tile={activeTile}
+          hubKey={hubKey}
+          openEntryId={openEntryId}
+          onClose={() => { setActiveTile(null); setOpenEntryId(null) }}
+        />
       )}
     </div>
   )
