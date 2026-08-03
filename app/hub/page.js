@@ -53,6 +53,8 @@ function PasswordGate({ onUnlock }) {
       if (data.ok) {
         localStorage.setItem('hub_key', password)
         onUnlock(password)
+      } else if (res.status === 503) {
+        setError('Hub isn’t configured yet — HUB_PASSWORD is missing on the server.')
       } else {
         setError('Wrong password.')
       }
