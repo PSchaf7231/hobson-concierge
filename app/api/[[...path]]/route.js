@@ -1344,8 +1344,16 @@ async function handleRoute(request, { params }) {
       }
 
       if (route === '/hub/entries' && method === 'GET') {
-        const tile = new URL(request.url).searchParams.get('tile')
-        const query = tile ? { tile } : {}
+        const params = new URL(request.url).searchParams
+        const tile = params.get('tile')
+        const q = params.get('q')
+        let query = {}
+        if (q) {
+          const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+          query = { $or: [{ name: re }, { notes: re }, { link: re }] }
+        } else if (tile) {
+          query = { tile }
+        }
         const entries = await db.collection('hub_entries').find(query).sort({ createdAt: 1 }).toArray()
         return handleCORS(NextResponse.json(entries.map(({ _id, ...e }) => e)))
       }
