@@ -1,0 +1,11 @@
+# Palm Beach Rental Pros
+
+> Luxury residential rentals in Palm Beach County with Paul Schafranick — waterfront estates, gated communities, and high-rise living.
+
+Palm Beach Rental Pros is a boutique luxury rental consultancy led by Paul Schafranick. We help renters find homes in Palm Beach County's most prestigious communities: Two City Plaza, Water Club, Alton, Vista Blue, Seven Bridges, Boca Bridges, and The Bristol. Contact: 561-255-7285.
+
+## Pages
+- [Home](/): Luxury rental search, featured listings, communities served, and contact form.
+
+## Optional
+- [Sitemap](/sitemap.xml): XML sitemap.
