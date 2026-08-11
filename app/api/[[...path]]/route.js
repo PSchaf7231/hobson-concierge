@@ -1358,6 +1358,79 @@ async function handleRoute(request, { params }) {
         return handleCORS(NextResponse.json(entries.map(({ _id, ...e }) => e)))
       }
 
+      // AI search: the keyword search above only matches literal text. This
+      // hits Claude for queries like "that limo folder" or "the beach house
+      // listing" where the words typed don't literally appear in an entry.
+      if (route === '/hub/search-ai' && method === 'POST') {
+        const body = await request.json()
+        const q = (body.q || '').toString().trim()
+        if (!q) return handleCORS(NextResponse.json({ results: [] }))
+        if (!process.env.ANTHROPIC_API_KEY) {
+          return handleCORS(NextResponse.json({ error: 'AI search is not configured (ANTHROPIC_API_KEY missing)' }, { status: 503 }))
+        }
+
+        const all = await db.collection('hub_entries').find({}).toArray()
+        const catalog = all.map((e) => ({
+          id: e.id,
+          tile: e.tile,
+          name: e.name,
+          notes: e.notes || '',
+          links: (e.links?.length ? e.links : (e.link ? [{ name: '', url: e.link }] : [])).map((l) => l.name || l.url)
+        }))
+
+        const sys = `You search a personal business hub for a real estate agent. Given a natural-language query and a JSON list of items (each with id, tile, name, notes, links), return the items that best match — including loose or indirect matches, not just literal keyword overlap. Order by relevance, best first. Return at most 8 results.
+
+OUTPUT FORMAT — STRICT JSON ONLY, no markdown fences:
+{"results": [{"id": "<item id>", "reason": "<one short phrase why this matches>"}]}
+
+If nothing plausibly matches, return {"results": []}.`
+
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': process.env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 600,
+            system: sys,
+            messages: [{ role: 'user', content: `Query: ${q}\n\nItems:\n${JSON.stringify(catalog)}` }]
+          })
+        })
+
+        if (!res.ok) {
+          const errText = await res.text()
+          return handleCORS(NextResponse.json({ error: `AI search failed: ${res.status} ${errText.slice(0, 200)}` }, { status: 502 }))
+        }
+
+        const data = await res.json()
+        const raw = data?.content?.find((b) => b.type === 'text')?.text || ''
+        let cleaned = raw.trim()
+        if (cleaned.startsWith('```')) {
+          cleaned = cleaned.replace(/^```(json)?/i, '').replace(/```$/, '').trim()
+        }
+        let parsed
+        try {
+          parsed = JSON.parse(cleaned)
+        } catch {
+          return handleCORS(NextResponse.json({ error: 'AI search returned an unparseable response' }, { status: 502 }))
+        }
+
+        const byId = new Map(all.map((e) => [e.id, e]))
+        const results = (parsed.results || [])
+          .map((r) => {
+            const entry = byId.get(r.id)
+            if (!entry) return null
+            const { _id, ...rest } = entry
+            return { ...rest, reason: r.reason || '' }
+          })
+          .filter(Boolean)
+
+        return handleCORS(NextResponse.json({ results }))
+      }
+
       if (route === '/hub/entries' && method === 'POST') {
         const body = await request.json()
         const tile = (body.tile || '').toString().trim()
