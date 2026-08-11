@@ -288,6 +288,9 @@ export default function HubPage() {
   const [results, setResults] = useState(null)
   const [searching, setSearching] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(true)
+  const [aiResults, setAiResults] = useState(null)
+  const [aiSearching, setAiSearching] = useState(false)
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem('hub_key')
@@ -314,6 +317,30 @@ export default function HubPage() {
     setActiveTile(TileByKey(entry.tile))
     setQuery('')
     setResults(null)
+    setAiResults(null)
+    setAiError('')
+  }
+
+  async function askAI() {
+    const q = query.trim()
+    if (!q) return
+    setAiSearching(true)
+    setAiError('')
+    setAiResults(null)
+    try {
+      const res = await fetch('/api/hub/search-ai', {
+        method: 'POST',
+        headers: authHeaders(hubKey),
+        body: JSON.stringify({ q })
+      })
+      const data = await res.json()
+      if (!res.ok) { setAiError(data.error || 'AI search failed.'); return }
+      setAiResults(data.results || [])
+    } catch {
+      setAiError('Could not reach the server.')
+    } finally {
+      setAiSearching(false)
+    }
   }
 
   return (
@@ -362,15 +389,16 @@ export default function HubPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setAiResults(null); setAiError('') }}
+            onKeyDown={(e) => { if (e.key === 'Enter') askAI() }}
             placeholder="Search every tile — name, notes, or link…"
             className="pl-10 bg-white/95"
           />
           {query.trim() && (
-            <div className="absolute z-10 mt-2 w-full rounded-lg border border-stone-200 bg-white shadow-lg max-h-80 overflow-y-auto">
+            <div className="absolute z-10 mt-2 w-full rounded-lg border border-stone-200 bg-white shadow-lg max-h-96 overflow-y-auto">
               {searching && <p className="p-3 text-sm text-stone-500">Searching…</p>}
-              {!searching && results?.length === 0 && (
-                <p className="p-3 text-sm text-stone-500">No matches.</p>
+              {!searching && results?.length === 0 && !aiResults && (
+                <p className="p-3 text-sm text-stone-500">No exact matches.</p>
               )}
               {!searching && results?.map((e) => {
                 const t = TileByKey(e.tile)
@@ -385,6 +413,38 @@ export default function HubPage() {
                   </button>
                 )
               })}
+
+              {!searching && (
+                <div className="p-2 border-t border-stone-100">
+                  {!aiResults && !aiSearching && (
+                    <button
+                      onClick={askAI}
+                      className="w-full text-sm text-left p-2 rounded hover:bg-stone-50 flex items-center gap-2"
+                      style={{ color: '#B8892E' }}
+                    >
+                      <Search className="h-3.5 w-3.5" /> Not finding it? Ask AI — “{query.trim()}”
+                    </button>
+                  )}
+                  {aiSearching && <p className="p-2 text-sm text-stone-500">Asking…</p>}
+                  {aiError && <p className="p-2 text-sm text-red-500">{aiError}</p>}
+                  {aiResults?.length === 0 && (
+                    <p className="p-2 text-sm text-stone-500">AI couldn't find anything close either.</p>
+                  )}
+                  {aiResults?.map((e) => {
+                    const t = TileByKey(e.tile)
+                    return (
+                      <button
+                        key={e.id}
+                        onClick={() => openResult(e)}
+                        className="w-full text-left p-3 hover:bg-stone-50 border-b border-stone-100 last:border-0 rounded"
+                      >
+                        <p className="text-sm font-medium" style={{ color: NAVY }}>{e.name}</p>
+                        <p className="text-xs text-stone-500">{t?.label || e.tile}{e.reason ? ` · ${e.reason}` : ''}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
