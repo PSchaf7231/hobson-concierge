@@ -1350,7 +1350,7 @@ async function handleRoute(request, { params }) {
         let query = {}
         if (q) {
           const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-          query = { $or: [{ name: re }, { notes: re }, { link: re }] }
+          query = { $or: [{ name: re }, { notes: re }, { link: re }, { 'links.name': re }, { 'links.url': re }] }
         } else if (tile) {
           query = { tile }
         }
@@ -1363,12 +1363,15 @@ async function handleRoute(request, { params }) {
         const tile = (body.tile || '').toString().trim()
         const name = (body.name || '').toString().trim()
         if (!tile || !name) return handleCORS(NextResponse.json({ error: 'tile and name required' }, { status: 400 }))
+        const links = Array.isArray(body.links)
+          ? body.links.map((l) => ({ name: (l.name || '').toString(), url: (l.url || '').toString() })).filter((l) => l.url)
+          : []
         const entry = {
           id: uuidv4(),
           tile,
           name,
           notes: (body.notes || '').toString(),
-          link: (body.link || '').toString(),
+          links,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
@@ -1384,6 +1387,9 @@ async function handleRoute(request, { params }) {
         const patch = { updatedAt: new Date().toISOString() }
         for (const f of ['name', 'notes', 'link']) {
           if (typeof body[f] === 'string') patch[f] = body[f]
+        }
+        if (Array.isArray(body.links)) {
+          patch.links = body.links.map((l) => ({ name: (l.name || '').toString(), url: (l.url || '').toString() })).filter((l) => l.url)
         }
         await db.collection('hub_entries').updateOne({ id }, { $set: patch })
         const updated = await db.collection('hub_entries').findOne({ id })

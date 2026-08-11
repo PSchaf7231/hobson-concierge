@@ -89,24 +89,44 @@ function PasswordGate({ onUnlock }) {
   )
 }
 
+// Normalize an entry's attachments to a list regardless of whether it was
+// saved under the old single-`link` schema or the newer `links` array, so
+// existing entries (like "Limo Assets") keep working with no data migration.
+function entryLinks(entry) {
+  if (entry?.links?.length) return entry.links
+  if (entry?.link) return [{ name: '', url: entry.link }]
+  return []
+}
+
 function EntryDialog({ open, onClose, tile, entry, onSave }) {
   const [name, setName] = useState('')
-  const [link, setLink] = useState('')
+  const [links, setLinks] = useState([{ name: '', url: '' }])
   const [notes, setNotes] = useState('')
 
   useEffect(() => {
     if (open) {
       setName(entry?.name || '')
-      setLink(entry?.link || '')
+      const existing = entryLinks(entry)
+      setLinks(existing.length ? existing : [{ name: '', url: '' }])
       setNotes(entry?.notes || '')
     }
   }, [open, entry])
 
   if (!open) return null
 
+  function updateLink(i, field, value) {
+    setLinks((prev) => prev.map((l, idx) => (idx === i ? { ...l, [field]: value } : l)))
+  }
+  function addLink() {
+    setLinks((prev) => [...prev, { name: '', url: '' }])
+  }
+  function removeLink(i) {
+    setLinks((prev) => prev.filter((_, idx) => idx !== i))
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{entry ? 'Edit entry' : `New entry in ${tile.label}`}</DialogTitle>
         </DialogHeader>
@@ -116,8 +136,35 @@ function EntryDialog({ open, onClose, tile, entry, onSave }) {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 123 Main St, or Limo Assets" />
           </div>
           <div>
-            <label className="text-xs text-stone-500">Link (Google Drive folder, doc, etc.)</label>
-            <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/..." />
+            <label className="text-xs text-stone-500">Files & links (add as many as you need — Drive folders, docs, anything with a URL)</label>
+            <div className="space-y-2 mt-1">
+              {links.map((l, i) => (
+                <div key={i} className="flex items-start gap-1">
+                  <div className="flex-1 space-y-1">
+                    <Input
+                      value={l.name}
+                      onChange={(e) => updateLink(i, 'name', e.target.value)}
+                      placeholder="Label (optional) — e.g. Interior photos"
+                      className="text-sm"
+                    />
+                    <Input
+                      value={l.url}
+                      onChange={(e) => updateLink(i, 'url', e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="text-sm"
+                    />
+                  </div>
+                  {links.length > 1 && (
+                    <Button size="sm" variant="ghost" className="mt-1" onClick={() => removeLink(i)}>
+                      <X className="h-4 w-4 text-red-500" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Button size="sm" variant="outline" className="mt-2" onClick={addLink}>
+              <Plus className="h-3 w-3 mr-1" /> Add another
+            </Button>
           </div>
           <div>
             <label className="text-xs text-stone-500">Notes</label>
@@ -129,7 +176,11 @@ function EntryDialog({ open, onClose, tile, entry, onSave }) {
           <Button
             disabled={!name.trim()}
             style={{ background: GOLD, color: NAVY }}
-            onClick={() => onSave({ name: name.trim(), link: link.trim(), notes })}
+            onClick={() => onSave({
+              name: name.trim(),
+              links: links.map((l) => ({ name: l.name.trim(), url: l.url.trim() })).filter((l) => l.url),
+              notes
+            })}
           >
             Save
           </Button>
@@ -197,10 +248,14 @@ function TilePanel({ tile, hubKey, onClose, openEntryId }) {
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate">{e.name}</p>
                 {e.notes && <p className="text-sm text-stone-500 whitespace-pre-wrap">{e.notes}</p>}
-                {e.link && (
-                  <a href={e.link} target="_blank" rel="noreferrer" className="text-sm inline-flex items-center gap-1 mt-1" style={{ color: '#B8892E' }}>
-                    Open link <ExternalLink className="h-3 w-3" />
-                  </a>
+                {entryLinks(e).length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {entryLinks(e).map((l, i) => (
+                      <a key={i} href={l.url} target="_blank" rel="noreferrer" className="text-sm flex items-center gap-1" style={{ color: '#B8892E' }}>
+                        <ExternalLink className="h-3 w-3 shrink-0" /> {l.name || l.url}
+                      </a>
+                    ))}
+                  </div>
                 )}
               </div>
               <div className="flex gap-1 shrink-0">
