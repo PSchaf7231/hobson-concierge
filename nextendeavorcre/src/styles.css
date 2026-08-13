@@ -1,0 +1,200 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Next Endeavor CRE × The Anasa Collection
+ * Editorial luxury. Ivory parchment, deep midnight, brass gold.
+ */
+
+@theme inline {
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-ink: var(--ink);
+  --color-ink-elevated: var(--ink-elevated);
+  --color-ink-deep: var(--ink-deep);
+  --color-ivory: var(--ivory);
+  --color-silver: var(--silver);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --shadow-elegant: 0 30px 80px -40px color-mix(in oklab, var(--ink) 45%, transparent);
+  --shadow-card: 0 1px 0 0 color-mix(in oklab, var(--ink) 6%, transparent),
+    0 20px 40px -30px color-mix(in oklab, var(--ink) 30%, transparent);
+}
+
+:root {
+  --radius: 0.25rem;
+
+  /* Brand — Institutional Navy + Brass */
+  --ivory: oklch(1 0 0);
+  --silver: oklch(0.92 0.012 250);
+  /* #0F1E36 deep corporate navy */
+  --ink: oklch(0.28 0.06 258);
+  /* #1E2E4A muted slate blue */
+  --ink-elevated: oklch(0.36 0.06 260);
+  --ink-deep: oklch(0.245 0.055 258);
+  /* #D4AF37 brass gold from logos */
+  --gold: oklch(0.76 0.13 85);
+  --gold-soft: oklch(0.86 0.09 85);
+
+  --background: var(--ink);
+  --foreground: var(--ivory);
+
+  --card: var(--ink-elevated);
+  --card-foreground: var(--ivory);
+  --popover: var(--card);
+  --popover-foreground: var(--ivory);
+
+  --primary: var(--gold);
+  --primary-foreground: var(--ink);
+
+  --secondary: var(--ink-deep);
+  --secondary-foreground: var(--ivory);
+
+  --muted: oklch(0.26 0.035 255);
+  --muted-foreground: var(--silver);
+
+  --accent: var(--gold);
+  --accent-foreground: var(--ink);
+
+  --destructive: oklch(0.55 0.2 27);
+  --destructive-foreground: var(--ivory);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--gold);
+}
+
+.dark {
+  --background: var(--ink);
+  --foreground: var(--ivory);
+  --card: oklch(0.22 0.025 250);
+  --card-foreground: var(--ivory);
+  --popover: var(--card);
+  --popover-foreground: var(--ivory);
+  --primary: var(--gold);
+  --primary-foreground: var(--ink);
+  --secondary: oklch(0.25 0.025 250);
+  --secondary-foreground: var(--ivory);
+  --muted: oklch(0.25 0.025 250);
+  --muted-foreground: oklch(0.72 0.02 250);
+  --accent: var(--gold);
+  --accent-foreground: var(--ink);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--gold);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+}
+
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+@utility rule-gold {
+  background: linear-gradient(90deg, transparent, var(--color-gold) 30%, var(--color-gold) 70%, transparent);
+}
+
+@utility hairline-gold {
+  border: 1px solid color-mix(in oklab, var(--color-gold) 35%, transparent);
+}
+
+/* Word-by-word headline fade-in */
+@keyframes word-rise {
+  0% { opacity: 0; transform: translateY(0.6em); filter: blur(6px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.word-reveal > span {
+  display: inline-block;
+  opacity: 0;
+  will-change: transform, opacity, filter;
+}
+.word-reveal.in-view > span {
+  animation: word-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Cursor ember halo */
+.ember-halo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 520px;
+  height: 520px;
+  margin-left: -260px;
+  margin-top: -260px;
+  pointer-events: none;
+  z-index: 60;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--color-gold) 18%, transparent) 0%,
+    color-mix(in oklab, var(--color-gold) 8%, transparent) 28%,
+    transparent 65%
+  );
+  mix-blend-mode: screen;
+  filter: blur(40px);
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+.ember-halo.is-active { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .ember-halo { display: none; }
+  .word-reveal > span { opacity: 1 !important; animation: none !important; }
+}
