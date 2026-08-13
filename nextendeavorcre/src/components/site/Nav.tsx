@@ -18,18 +18,23 @@ export function Nav() {
     <header className="absolute inset-x-0 top-0 z-50 bg-transparent">
 
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 pt-1 pb-3 md:px-10">
-        <a href="#home" className="flex items-center gap-5 overflow-visible drop-shadow-[0_2px_8px_color-mix(in_oklab,var(--ink)_70%,transparent)]">
-          <img
-            src={anasaLogo}
-            alt="The Anasa Collection"
-            className="h-12 w-auto shrink-0 object-contain sm:h-14"
-          />
-          <span className="hidden h-8 w-px bg-ivory/30 sm:block" />
-          <img
-            src={neLogo}
-            alt="Next Endeavor CRE"
-            className="h-12 w-auto shrink-0 object-contain sm:h-14"
-          />
+        <a href="#home" className="flex flex-col gap-1 overflow-visible drop-shadow-[0_2px_8px_color-mix(in_oklab,var(--ink)_70%,transparent)]">
+          <span className="flex items-center gap-5">
+            <img
+              src={anasaLogo}
+              alt="The Anasa Collection"
+              className="h-12 w-auto shrink-0 object-contain sm:h-14"
+            />
+            <span className="hidden h-8 w-px bg-ivory/30 sm:block" />
+            <img
+              src={neLogo}
+              alt="Next Endeavor CRE"
+              className="h-12 w-auto shrink-0 object-contain sm:h-14"
+            />
+          </span>
+          <span className="font-display uppercase tracking-[0.15em] text-ivory">
+            <span className="text-lg sm:text-xl">V</span>anta<span className="text-lg sm:text-xl">S</span>ure Realty
+          </span>
         </a>
 
 
