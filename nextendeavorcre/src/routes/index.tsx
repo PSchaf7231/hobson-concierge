@@ -61,9 +61,9 @@ function Index() {
     <main className="bg-background text-foreground">
       <Nav />
       <Hero />
+      <PropertySearch />
       <Commercial />
       <Residential />
-      <PropertySearch />
       <FeeTiers />
       <Team />
       <Contact />

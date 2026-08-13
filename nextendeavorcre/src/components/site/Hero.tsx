@@ -49,10 +49,10 @@ export function Hero() {
               Explore Commercial
             </a>
             <a
-              href="#residential"
+              href="#search"
               className="group inline-flex items-center gap-3 bg-gold px-8 py-4 text-[11px] font-medium uppercase tracking-[0.28em] text-ink transition-all hover:bg-ivory"
             >
-              Explore Residential
+              Search Residential
             </a>
           </div>
         </div>
