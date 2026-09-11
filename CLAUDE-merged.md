@@ -112,3 +112,21 @@ When Paul corrects something, or a mistake is caught mid-task: before continuing
 ## Lessons
 
 - (rules get added here as they come up)
+
+---
+
+## Handoff / Current State (updated 2026-08-29)
+
+Read this section first in any new session — it's the fastest way to get back up to speed if continuity with a prior conversation is ever lost.
+
+**This repo (`hobson-concierge`), status:** `main` is current and deployed on Vercel. It includes the private `/hub`, VantaSure Realty, Next Endeavor CRE, Palm Beach Rental Pros, and the Oasis Hallandale landing page. Emergent-era artifacts (`.emergent/`, `test_result.md`, etc.) were already removed (PR #66).
+
+**Stale branch to be aware of:** `conflict_090726_1832` — an old, abandoned snapshot from when Paul tried moving off Emergent to a different AI builder, which went badly. It predates Next Endeavor CRE and Oasis Living and is not connected to any current work. Safe to leave alone or delete; confirm with Paul before deleting.
+
+**Related but separate repos (do not confuse with this one):**
+- `PSchaf7231/Hobson-` ("hobson-agent") — a small, separate lead-management app for individual real estate agents (leads list, call handling, contact stages). Built to be used once an agent has active leads coming in. Not the concierge/IDX site.
+- `PSchaf7231/pschaf7231-preconstruction` — "South Florida New Construction Directory," a completely different product (pre-construction listings directory with a Gemini AI chatbot + real-time voice concierge). Built in Google AI Studio, exported to its own separate GitHub repo, deployed as its own separate Vercel project. As of this writing: real-time voice fails on Vercel (serverless functions can't hold the persistent WebSocket connection Gemini Live needs) but works fine on the AI Studio preview link. Plan in progress: migrate hosting to Google Cloud Run (supports full-time hosting + custom domains), paused because Cloud Run required a billing card Paul didn't have on hand that day.
+
+**Domains:** `askhobson.homes` (Namecheap, nameservers delegated to Vercel) is correctly connected to the `hobson-concierge` Vercel project — both the bare domain and `www` show Valid Configuration as of 2026-08-29.
+
+**Paul's standing concern:** he has been burned before by losing continuity when a coding-agent conversation ended and a fresh one couldn't get up to speed. This section exists specifically to make that recoverable — keep it current, not just this repo's static rules.
