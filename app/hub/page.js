@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   CalendarClock, FileText, StickyNote, Contact, FolderLock, User,
   Home, Megaphone, Image as ImageIcon, Users, FileSignature, LineChart,
-  Plus, Trash2, ExternalLink, Lock, X, Search, Play, Pause
+  Plus, Trash2, ExternalLink, Lock, X, Search, Play, Pause, Zap
 } from 'lucide-react'
 
 const NAVY = '#0A1628'
@@ -27,7 +27,8 @@ const TILES = [
   { key: 'social_media_assets', label: 'Social Media Assets', icon: ImageIcon },
   { key: 'leads_pipeline', label: 'Leads & Pipeline', icon: Users },
   { key: 'transactions', label: 'Transactions', icon: FileSignature },
-  { key: 'market_analytics', label: 'Market Analytics', icon: LineChart }
+  { key: 'market_analytics', label: 'Market Analytics', icon: LineChart },
+  { key: 'ghl', label: 'GHL', icon: Zap }
 ]
 
 function authHeaders(key) {
