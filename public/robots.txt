@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Private / non-SEO surfaces
+Disallow: /hub
+Disallow: /api/
+Disallow: /_next/
+
+Sitemap: https://www.askhobson.homes/sitemap.xml
