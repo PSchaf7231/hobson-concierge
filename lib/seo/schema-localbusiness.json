@@ -1,0 +1,120 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["RealEstateAgent", "LocalBusiness"],
+      "@id": "https://www.askhobson.homes/#business",
+      "name": "Paul Schafranick — The Anasa Collection × Next Endeavor CRE",
+      "alternateName": [
+        "Ask Hobson",
+        "Hobson",
+        "The Anasa Collection",
+        "Next Endeavor CRE"
+      ],
+      "description": "Palm Beach County luxury residential concierge and buyer-side commercial advisory. Hobson is the AI concierge for The Anasa Collection and Next Endeavor CRE, with Paul Schafranick at VantaSure Realty.",
+      "url": "https://www.askhobson.homes/",
+      "telephone": "+1-561-255-7285",
+      "email": "exppbc@gmail.com",
+      "image": "https://www.askhobson.homes/anasa.png",
+      "logo": "https://www.askhobson.homes/anasa.png",
+      "priceRange": "$$$",
+      "currenciesAccepted": "USD",
+      "paymentAccepted": "Cash, Check, Wire",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "32 SE 2nd Ave Ste 339",
+        "addressLocality": "Delray Beach",
+        "addressRegion": "FL",
+        "postalCode": "33444",
+        "addressCountry": "US"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 26.4615,
+        "longitude": -80.0728
+      },
+      "areaServed": [
+        {
+          "@type": "AdministrativeArea",
+          "name": "Palm Beach County"
+        },
+        {
+          "@type": "City",
+          "name": "Delray Beach"
+        },
+        {
+          "@type": "City",
+          "name": "Boca Raton"
+        },
+        {
+          "@type": "City",
+          "name": "Palm Beach"
+        },
+        {
+          "@type": "City",
+          "name": "West Palm Beach"
+        }
+      ],
+      "knowsAbout": [
+        "Luxury residential real estate",
+        "Palm Beach County homes",
+        "Delray Beach relocation",
+        "Boca Raton luxury homes",
+        "Triple-net medical commercial real estate"
+      ],
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "VantaSure Realty"
+      },
+      "sameAs": [
+        "https://www.nextendeavorcre.com/",
+        "https://www.linkedin.com/in/paul-schafranick-ab8087237"
+      ],
+      "contactPoint": [
+        {
+          "@type": "ContactPoint",
+          "contactType": "customer service",
+          "telephone": "+1-561-255-7285",
+          "email": "exppbc@gmail.com",
+          "areaServed": "US",
+          "availableLanguage": ["English"]
+        }
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.askhobson.homes/#website",
+      "url": "https://www.askhobson.homes/",
+      "name": "Ask Hobson",
+      "description": "AI concierge for Palm Beach County luxury homes and Next Endeavor CRE advisory.",
+      "publisher": {
+        "@id": "https://www.askhobson.homes/#business"
+      },
+      "inLanguage": "en-US"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.askhobson.homes/#paul",
+      "name": "Paul Schafranick",
+      "jobTitle": "Real Estate Advisor",
+      "telephone": "+1-561-255-7285",
+      "email": "exppbc@gmail.com",
+      "worksFor": {
+        "@id": "https://www.askhobson.homes/#business"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "32 SE 2nd Ave Ste 339",
+        "addressLocality": "Delray Beach",
+        "addressRegion": "FL",
+        "postalCode": "33444",
+        "addressCountry": "US"
+      },
+      "url": "https://www.askhobson.homes/",
+      "sameAs": [
+        "https://www.linkedin.com/in/paul-schafranick-ab8087237",
+        "https://www.nextendeavorcre.com/"
+      ]
+    }
+  ]
+}

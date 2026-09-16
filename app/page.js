@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import HobsonVoiceAgent from '@/components/HobsonVoiceAgent'
-import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2, Bookmark, Play, Pause } from 'lucide-react'
+import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2, Bookmark, Play, Pause, BookOpen } from 'lucide-react'
+import { GuidePanel } from '@/components/GuidePanel'
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center bg-[#0A1628] text-[#D4AF37]/60">Loading map…</div> })
 const MicroOrb = dynamic(() => import('@/components/MicroOrb'), { ssr: false })
@@ -1096,6 +1097,7 @@ function App() {
   // Mobile toggle: 'chat' shows Hobson panel, 'properties' shows listings panel
   // On desktop (lg+) both are always visible side-by-side.
   const [mobileView, setMobileView] = useState('chat')
+  const [guideOpen, setGuideOpen] = useState(false)
 
   // When a search (chat or filter-box) actually turns up results, jump to the
   // Properties view automatically on mobile — nothing on screen otherwise
@@ -1149,9 +1151,19 @@ function App() {
             </TabsList>
           </Tabs>
           {/* RIGHT: inline lead capture (3 shaded fields + save) */}
-          <InlineLeadCapture />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setGuideOpen(true)}
+              className="h-8 px-2 sm:px-3 rounded border border-[#D4AF37]/40 text-[#D4AF37] text-[10px] uppercase tracking-[0.22em] flex items-center gap-1 hover:bg-[#D4AF37]/10 transition flex-shrink-0"
+            >
+              <BookOpen className="h-3 w-3" /><span className="hidden sm:inline">Guide</span>
+            </button>
+            <InlineLeadCapture />
+          </div>
         </div>
       </header>
+
+      <GuidePanel open={guideOpen} onOpenChange={setGuideOpen} />
 
       {/* Sitewide gold bar — the one, persistent way to start a live voice
           conversation with Hobson. Always visible (not tied to chat state or
@@ -1207,6 +1219,10 @@ function App() {
           <div className="text-[#F5EDE0]/40">Powered by Hobson · Real Estate, Handled</div>
           <a href="https://app.boldtrail.com/" target="_blank" rel="noopener noreferrer" className="text-[#F5EDE0]/50 hover:text-[#D4AF37] transition uppercase tracking-[0.22em]">Agent Login</a>
         </div>
+        <address className="max-w-[1600px] mx-auto px-6 pt-1 text-[10px] not-italic text-[#F5EDE0]/30" style={{ fontStyle: 'normal' }}>
+          Paul Schafranick · VantaSure Realty · 32 SE 2nd Ave Ste 339, Delray Beach, FL 33444 ·{' '}
+          <a href="tel:+15612557285" className="hover:text-[#D4AF37] transition">561-255-7285</a>
+        </address>
       </footer>
     </div>
   )
