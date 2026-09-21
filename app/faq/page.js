@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import { GuidePageLayout } from '@/components/GuidePageLayout'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { FAQS } from '@/lib/seo/faq-data'
@@ -8,21 +9,40 @@ export const metadata = {
   alternates: { canonical: 'https://www.askhobson.homes/faq' }
 }
 
+// Generated from FAQS below so the markup can never drift out of sync
+// with the visible questions/answers on this page.
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQS.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.a }
+  }))
+}
+
 export default function FaqPage() {
   return (
-    <GuidePageLayout eyebrow="Guide" title="Frequently Asked">
-      <Accordion type="single" collapsible className="w-full">
-        {FAQS.map((item, i) => (
-          <AccordionItem key={i} value={`item-${i}`} className="border-[#D4AF37]/15">
-            <AccordionTrigger className="text-left text-[#F5EDE0] hover:text-[#D4AF37] hover:no-underline">
-              {item.q}
-            </AccordionTrigger>
-            <AccordionContent className="text-[#F5EDE0]/70 leading-relaxed">
-              {item.a}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-    </GuidePageLayout>
+    <>
+      <Script
+        id="schema-faq"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <GuidePageLayout eyebrow="Guide" title="Frequently Asked">
+        <Accordion type="single" collapsible className="w-full">
+          {FAQS.map((item, i) => (
+            <AccordionItem key={i} value={`item-${i}`} className="border-[#D4AF37]/15">
+              <AccordionTrigger className="text-left text-[#F5EDE0] hover:text-[#D4AF37] hover:no-underline">
+                {item.q}
+              </AccordionTrigger>
+              <AccordionContent className="text-[#F5EDE0]/70 leading-relaxed">
+                {item.a}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </GuidePageLayout>
+    </>
   )
 }

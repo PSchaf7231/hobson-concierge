@@ -59,6 +59,10 @@ export default function PalmBeachCountyHomesPage() {
       <GuideH2>Soft next step</GuideH2>
       <p>Palm Beach County is large. Your brief should not be. Ask Hobson to narrow it — then let Paul handle the rest.</p>
       <p>
+        <GuideLink href="/living-in-delray-beach">Living in Delray Beach</GuideLink> ·{' '}
+        <GuideLink href="/boca-raton-luxury-homes">Boca Raton luxury homes</GuideLink> ·{' '}
+        <GuideLink href="/relocating-to-palm-beach-county">Relocating to Palm Beach County</GuideLink> ·{' '}
+        <GuideLink href="/palm-beach-waterfront-vs-inland">Waterfront vs inland</GuideLink> ·{' '}
         <GuideLink href="/faq">FAQ</GuideLink> · <GuideLink href="/">Ask Hobson</GuideLink> ·{' '}
         <a href="https://www.nextendeavorcre.com/" className="text-[#D4AF37] hover:text-[#F5EDE0] transition underline underline-offset-2">Next Endeavor CRE</a>
       </p>

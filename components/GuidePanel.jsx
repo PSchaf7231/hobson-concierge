@@ -10,7 +10,9 @@ const NAVY = '#0A1628'
 const GUIDES = [
   { href: '/living-in-delray-beach', label: 'Living in Delray Beach' },
   { href: '/boca-raton-luxury-homes', label: 'Boca Raton Luxury Homes' },
-  { href: '/palm-beach-county-homes', label: 'Palm Beach County Homes' }
+  { href: '/palm-beach-county-homes', label: 'Palm Beach County Homes' },
+  { href: '/relocating-to-palm-beach-county', label: 'Relocating to Palm Beach County' },
+  { href: '/palm-beach-waterfront-vs-inland', label: 'Waterfront vs Inland' }
 ]
 
 export function GuidePanel({ open, onOpenChange }) {

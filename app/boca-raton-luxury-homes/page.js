@@ -60,6 +60,8 @@ export default function BocaRatonLuxuryHomesPage() {
       <p>
         <GuideLink href="/living-in-delray-beach">Living in Delray Beach</GuideLink> ·{' '}
         <GuideLink href="/palm-beach-county-homes">Palm Beach County homes</GuideLink> ·{' '}
+        <GuideLink href="/relocating-to-palm-beach-county">Relocating to Palm Beach County</GuideLink> ·{' '}
+        <GuideLink href="/palm-beach-waterfront-vs-inland">Waterfront vs inland</GuideLink> ·{' '}
         <GuideLink href="/faq">FAQ</GuideLink>
       </p>
     </GuidePageLayout>

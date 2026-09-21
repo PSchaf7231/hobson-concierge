@@ -62,6 +62,8 @@ export default function LivingInDelrayBeachPage() {
       <p>
         <GuideLink href="/palm-beach-county-homes">Palm Beach County hub</GuideLink> ·{' '}
         <GuideLink href="/boca-raton-luxury-homes">Boca Raton luxury</GuideLink> ·{' '}
+        <GuideLink href="/relocating-to-palm-beach-county">Relocating to Palm Beach County</GuideLink> ·{' '}
+        <GuideLink href="/palm-beach-waterfront-vs-inland">Waterfront vs inland</GuideLink> ·{' '}
         <a href="https://www.nextendeavorcre.com/" className="text-[#D4AF37] hover:text-[#F5EDE0] transition underline underline-offset-2">Next Endeavor CRE (commercial depth)</a>
       </p>
     </GuidePageLayout>
