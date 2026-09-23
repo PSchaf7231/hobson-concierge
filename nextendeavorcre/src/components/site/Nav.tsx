@@ -32,10 +32,7 @@ export function Nav() {
               className="h-12 w-auto shrink-0 object-contain sm:h-14"
             />
           </span>
-          <span className="font-display uppercase tracking-[0.1em] text-ivory text-3xl leading-none sm:text-4xl">
-            <span className="text-4xl sm:text-5xl">V</span>anta<span className="text-4xl sm:text-5xl">S</span>ure Realty
-          </span>
-          <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-gold/80 sm:text-[11px]">
+          <span className="text-[12px] font-medium uppercase tracking-[0.26em] text-gold/85 sm:text-[13px]">
             Palm Beach Real Estate Pros
           </span>
         </a>
