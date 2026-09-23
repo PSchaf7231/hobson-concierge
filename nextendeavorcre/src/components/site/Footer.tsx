@@ -32,6 +32,8 @@ export function Footer() {
           <p>© {new Date().getFullYear()} Next Endeavor CRE · The Anasa Collection</p>
           <span className="hidden h-1 w-1 rounded-full bg-ivory/30 sm:block" />
           <p>Palm Beach County, Florida · By Appointment</p>
+          <span className="hidden h-1 w-1 rounded-full bg-ivory/30 sm:block" />
+          <p>Palm Beach Real Estate Pros</p>
         </div>
 
         <p className="mt-4 max-w-3xl text-[11px] leading-relaxed text-ivory/45">
