@@ -27,7 +27,7 @@ export function GuidePageLayout({ eyebrow, title, children }) {
 
       <footer className="border-t border-[#D4AF37]/15 py-6">
         <div className="max-w-3xl mx-auto px-6 text-[11px] text-[#F5EDE0]/40">
-          <p className="text-[#F5EDE0]/60">Paul Schafranick · VantaSure Realty</p>
+          <p className="text-[#F5EDE0]/60">Paul Schafranick · VantaSure Realty · Palm Beach Real Estate Pros</p>
           <p>32 SE 2nd Ave Ste 339, Delray Beach, FL 33444 · <a href="tel:+15612557285" className="hover:text-[#D4AF37] transition">561-255-7285</a></p>
         </div>
       </footer>

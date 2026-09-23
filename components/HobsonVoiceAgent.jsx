@@ -73,26 +73,20 @@ export default function HobsonVoiceAgent() {
     <div
       onClick={clickable ? startCall : undefined}
       role={clickable ? 'button' : undefined}
-      className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 transition ${clickable ? 'cursor-pointer hover:brightness-110' : ''}`}
+      className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 transition ${clickable ? 'cursor-pointer hover:brightness-110' : ''}`}
       style={{ background: 'linear-gradient(to right, #A88418, #C9A227 45%, #E6C878 55%, #C9A227)' }}
     >
-      <span className="hidden sm:inline text-[#3a2a10]/75 text-[10px] uppercase tracking-[0.22em] font-semibold whitespace-nowrap flex-shrink-0">
-        Palm Beach Real Estate Pros
-      </span>
-      <div className="flex items-center justify-center gap-3 min-w-0">
-        <HobsonOrb size={22} state={orbState} />
-        <span className="text-[#3a2a10] text-[11px] sm:text-xs uppercase tracking-[0.2em] font-semibold truncate">{label}</span>
-        {active && (
-          <button
-            onClick={(e) => { e.stopPropagation(); endCall() }}
-            className="ml-1 h-6 w-6 rounded-full flex items-center justify-center bg-[#0A1628]/20 hover:bg-[#0A1628]/35 text-[#3a2a10] flex-shrink-0"
-            aria-label="End call"
-          >
-            <PhoneOff className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      <span className="hidden sm:block w-[1px]" aria-hidden="true" />
+      <HobsonOrb size={22} state={orbState} />
+      <span className="text-[#3a2a10] text-[11px] sm:text-xs uppercase tracking-[0.2em] font-semibold truncate">{label}</span>
+      {active && (
+        <button
+          onClick={(e) => { e.stopPropagation(); endCall() }}
+          className="ml-1 h-6 w-6 rounded-full flex items-center justify-center bg-[#0A1628]/20 hover:bg-[#0A1628]/35 text-[#3a2a10] flex-shrink-0"
+          aria-label="End call"
+        >
+          <PhoneOff className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   )
 }

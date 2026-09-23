@@ -1220,7 +1220,7 @@ function App() {
           <a href="https://app.boldtrail.com/" target="_blank" rel="noopener noreferrer" className="text-[#F5EDE0]/50 hover:text-[#D4AF37] transition uppercase tracking-[0.22em]">Agent Login</a>
         </div>
         <address className="max-w-[1600px] mx-auto px-6 pt-1 text-[10px] not-italic text-[#F5EDE0]/30" style={{ fontStyle: 'normal' }}>
-          Paul Schafranick · VantaSure Realty · 32 SE 2nd Ave Ste 339, Delray Beach, FL 33444 ·{' '}
+          Paul Schafranick · VantaSure Realty · Palm Beach Real Estate Pros · 32 SE 2nd Ave Ste 339, Delray Beach, FL 33444 ·{' '}
           <a href="tel:+15612557285" className="hover:text-[#D4AF37] transition">561-255-7285</a>
         </address>
       </footer>
