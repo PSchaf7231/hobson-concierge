@@ -238,7 +238,7 @@ function InlineLeadCapture() {
   return (
     <>
       {/* Desktop / tablet: inline 4-field capture bar. Narrower between lg
-          and 1360px (where the VantaSure Realty header text also needs
+          and 1360px (where the header wordmark also needs
           room), full-size from 1360px up — checked against real screenshots
           at 1024/1280/1440, plain `xl:` (1280) still clipped the button. */}
       <div className="hidden lg:flex items-center gap-1 min-[1360px]:gap-1.5 flex-shrink-0">
@@ -1128,11 +1128,14 @@ function App() {
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
         <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4">
-          {/* LEFT: brand logos */}
+          {/* LEFT: brand. Mobile keeps the two logos for now; md+ shows the
+              Palm Beach Real Estate Pros wordmark (live text, see .pb-wordmark). */}
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            <img src={LOGOS.residential} alt="Anasa Collection" className="h-8 w-11 sm:h-10 sm:w-14 object-contain" />
-            <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
-            <span className="hidden md:inline text-[#F5EDE0] text-2xl sm:text-3xl ml-2 whitespace-nowrap" style={{ fontFamily: SERIF, fontWeight: 500 }}>VantaSure Realty</span>
+            <img src={LOGOS.residential} alt="Anasa Collection" className="md:hidden h-8 w-11 sm:h-10 sm:w-14 object-contain" />
+            <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="md:hidden h-8 w-8 sm:h-10 sm:w-10 object-contain" />
+            <a href="/" className="pb-wordmark hidden md:inline-block" aria-label="Palm Beach Real Estate Pros, home">
+              <span className="cap">P</span>ALM <span className="cap">B</span>EACH <span className="cap">R</span>EAL <span className="cap">E</span>STATE <span className="cap">P</span>ROS
+            </a>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">

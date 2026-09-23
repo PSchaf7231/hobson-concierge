@@ -164,3 +164,27 @@ code {
     @apply bg-background text-foreground;
     }
 }
+/* Header wordmark: Palm Beach Real Estate Pros (desktop/tablet header) */
+.pb-wordmark {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 600;
+  font-size: 34px;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  white-space: nowrap;
+  text-decoration: none;
+  color: #E2B443; /* fallback flat gold */
+  background: linear-gradient(180deg, #F6DE95 0%, #E2B443 45%, #B98A26 70%, #EFCB6E 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.pb-wordmark .cap { font-size: 1.3em; }
+
+/* Sized to share the header with the tabs and the Save Search bar without
+   pushing them off-screen. Measured against the header at each width: the
+   inline lead form appears at lg (1024) and widens at 1360, so the wordmark
+   steps down at each of those and grows back as the viewport widens. */
+@media (min-width: 768px)  { .pb-wordmark { font-size: clamp(14px, calc(14px + (100vw - 768px) * 0.06), 22px); } }
+@media (min-width: 1024px) { .pb-wordmark { font-size: clamp(14px, calc(14px + (100vw - 1024px) * 0.05), 30px); } }
+@media (min-width: 1360px) { .pb-wordmark { font-size: clamp(14px, calc(14px + (100vw - 1360px) * 0.05), 26px); } }
