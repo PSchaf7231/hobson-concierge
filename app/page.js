@@ -242,11 +242,11 @@ function InlineLeadCapture() {
           room), full-size from 1360px up — checked against real screenshots
           at 1024/1280/1440, plain `xl:` (1280) still clipped the button. */}
       <div className="hidden lg:flex items-center gap-1 min-[1360px]:gap-1.5 flex-shrink-0">
-        <span className="hidden min-[1360px]:inline text-[9px] uppercase tracking-[0.2em] text-[#D4AF37]/80 font-medium mr-0.5">Save Search:</span>
+        <span className="hidden min-[1360px]:flex flex-col leading-tight text-[9px] uppercase tracking-[0.2em] text-[#D4AF37]/80 font-medium mr-0.5"><span>Save</span><span>Search:</span></span>
         <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-16 min-[1360px]:w-24`} />
         <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-16 min-[1360px]:w-24`} />
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-24 min-[1360px]:w-36`} />
-        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-24 min-[1360px]:w-36`} />
+        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (= password)" className={`${inputCls} w-24 min-[1360px]:w-32`} />
         <button onClick={submit} disabled={busy || !firstName || !email || !phone} className="h-8 px-2 min-[1360px]:px-3 rounded bg-[#D4AF37] hover:bg-[#E2C285] disabled:opacity-40 text-[#0A1628] text-[10px] uppercase tracking-[0.2em] font-semibold transition whitespace-nowrap">
           {busy ? '…' : (<><span className="min-[1360px]:hidden">Save</span><span className="hidden min-[1360px]:inline">Save Search</span></>)}
         </button>
