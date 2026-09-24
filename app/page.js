@@ -242,7 +242,9 @@ function InlineLeadCapture() {
           room), full-size from 1360px up — checked against real screenshots
           at 1024/1280/1440, plain `xl:` (1280) still clipped the button. */}
       <div className="hidden lg:flex items-center gap-1 min-[1360px]:gap-1.5 flex-shrink-0">
-        <span className="hidden min-[1360px]:inline text-[9px] uppercase tracking-[0.2em] text-[#D4AF37]/80 font-medium mr-0.5">Save Search:</span>
+        <span className="hidden min-[1360px]:flex flex-col leading-[1.05] text-[9px] uppercase tracking-[0.2em] text-[#D4AF37]/80 font-medium mr-0.5">
+          <span>Save</span><span>Search:</span>
+        </span>
         <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={`${inputCls} w-16 min-[1360px]:w-24`} />
         <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={`${inputCls} w-16 min-[1360px]:w-24`} />
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className={`${inputCls} w-24 min-[1360px]:w-36`} />
@@ -1132,13 +1134,13 @@ function App() {
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             <img src={LOGOS.residential} alt="Anasa Collection" className="h-8 w-11 sm:h-10 sm:w-14 object-contain" />
             <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
-            <span className="hidden min-[1600px]:inline text-[#F5EDE0] text-2xl sm:text-3xl ml-2 whitespace-nowrap" style={{ fontFamily: SERIF, fontWeight: 500 }}>Palm Beach Real Estate Pros</span>
+            <span className="hidden min-[1550px]:inline text-[#F5EDE0] text-2xl sm:text-3xl ml-2 whitespace-nowrap" style={{ fontFamily: SERIF, fontWeight: 500 }}>Palm Beach Real Estate Pros</span>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
             <TabsList className="bg-transparent border border-[#D4AF37]/25 h-8">
               <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
-                <Sparkles className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">Concierge</span>
+                <span className="hidden sm:inline">Concierge</span><Sparkles className="h-3 w-3 sm:hidden" />
               </TabsTrigger>
               <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
                 <MapIcon className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">Map</span>
