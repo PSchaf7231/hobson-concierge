@@ -1127,12 +1127,12 @@ function App() {
     <div className="min-h-screen lg:h-screen flex flex-col overflow-y-auto lg:overflow-hidden" style={{ background: NAVY }}>
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
-        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4 overflow-x-auto">
           {/* LEFT: brand logos */}
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             <img src={LOGOS.residential} alt="Anasa Collection" className="h-8 w-11 sm:h-10 sm:w-14 object-contain" />
             <img src={LOGOS.commercial} alt="Next Endeavor CRE" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
-            <span className="hidden md:inline text-[#F5EDE0] text-2xl sm:text-3xl ml-2 whitespace-nowrap" style={{ fontFamily: SERIF, fontWeight: 500 }}>VantaSure Realty</span>
+            <span className="hidden min-[1450px]:inline text-[#F5EDE0] text-2xl sm:text-3xl ml-2 whitespace-nowrap" style={{ fontFamily: SERIF, fontWeight: 500 }}>VantaSure Realty</span>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
