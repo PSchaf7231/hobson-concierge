@@ -1132,15 +1132,15 @@ function App() {
         <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4 overflow-x-auto">
           {/* LEFT: brand name (logos live in the always-visible BrandFooterBar below) */}
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            <span className="hidden md:inline text-[#F5EDE0] text-lg lg:text-2xl whitespace-nowrap" style={{ fontFamily: SERIF, fontWeight: 500 }}>Palm Beach Real Estate Pros</span>
+            <span className="hidden md:inline text-[#F5EDE0] text-lg lg:text-2xl whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px] lg:max-w-[310px]" style={{ fontFamily: SERIF, fontWeight: 500 }}>Palm Beach Real Estate Pros</span>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
             <TabsList className="bg-transparent border border-[#D4AF37]/25 h-8">
-              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
+              <TabsTrigger value="concierge" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-1.5 sm:px-2">
                 <span className="hidden sm:inline">Concierge</span><Sparkles className="h-3 w-3 sm:hidden" />
               </TabsTrigger>
-              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-2 sm:px-3">
+              <TabsTrigger value="map" className="data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#0A1628] text-[#F5EDE0] text-[10px] uppercase tracking-[0.22em] px-1.5 sm:px-2">
                 <MapIcon className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">Map</span>
               </TabsTrigger>
               {isAdmin && (
