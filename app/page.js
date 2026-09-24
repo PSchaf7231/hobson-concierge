@@ -1130,9 +1130,18 @@ function App() {
       {/* Top Nav — simple, single row, Concierge + Map only */}
       <header className="flex-shrink-0 border-b border-[#D4AF37]/20" style={{ background: NAVY }}>
         <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4 overflow-x-auto">
-          {/* LEFT: brand name (logos live in the always-visible BrandFooterBar below) */}
-          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            <span className="hidden md:inline text-[#F5EDE0] text-lg lg:text-2xl whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px] lg:max-w-[310px]" style={{ fontFamily: SERIF, fontWeight: 500 }}>Palm Beach Real Estate Pros</span>
+          {/* LEFT: brand wordmark (logos live in the always-visible BrandFooterBar below).
+              Allowed to shrink (unlike the tabs/lead-capture groups, which never do) so it
+              absorbs any squeeze itself via ellipsis rather than pushing Save Search off-screen. */}
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-shrink basis-auto">
+            <a
+              href="/"
+              aria-label="Palm Beach Real Estate Pros, home"
+              className="hidden md:inline-block bg-clip-text text-transparent bg-[linear-gradient(180deg,#F6DE95_0%,#E2B443_45%,#B98A26_70%,#EFCB6E_100%)] whitespace-nowrap overflow-hidden text-ellipsis max-w-full tracking-[0.06em] leading-[1.15] text-lg xl:text-2xl"
+              style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600 }}
+            >
+              <span style={{ fontSize: '1.3em' }}>P</span>ALM <span style={{ fontSize: '1.3em' }}>B</span>EACH <span style={{ fontSize: '1.3em' }}>R</span>EAL <span style={{ fontSize: '1.3em' }}>E</span>STATE <span style={{ fontSize: '1.3em' }}>P</span>ROS
+            </a>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
