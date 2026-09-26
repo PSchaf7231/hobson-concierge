@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { upload } from '@vercel/blob/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   CalendarClock, FileText, StickyNote, Contact, FolderLock, User,
   Home, Megaphone, Image as ImageIcon, Users, FileSignature, LineChart,
-  Plus, Trash2, ExternalLink, Lock, X, Search, Play, Pause, Zap
+  Plus, Trash2, ExternalLink, Lock, X, Search, Play, Pause, Zap, Upload
 } from 'lucide-react'
 
 const NAVY = '#0A1628'
@@ -99,10 +100,14 @@ function entryLinks(entry) {
   return []
 }
 
-function EntryDialog({ open, onClose, tile, entry, onSave }) {
+function EntryDialog({ open, onClose, tile, entry, onSave, hubKey }) {
   const [name, setName] = useState('')
   const [links, setLinks] = useState([{ name: '', url: '' }])
   const [notes, setNotes] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('')
+  const [uploadError, setUploadError] = useState('')
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (open) {
@@ -110,6 +115,7 @@ function EntryDialog({ open, onClose, tile, entry, onSave }) {
       const existing = entryLinks(entry)
       setLinks(existing.length ? existing : [{ name: '', url: '' }])
       setNotes(entry?.notes || '')
+      setUploadError('')
     }
   }, [open, entry])
 
@@ -125,6 +131,40 @@ function EntryDialog({ open, onClose, tile, entry, onSave }) {
     setLinks((prev) => prev.filter((_, idx) => idx !== i))
   }
 
+  // Uploads straight from the browser to Vercel Blob storage (not through
+  // this component's own server, which would choke on anything past a few
+  // MB) then drops the resulting file into the links list, same shape as a
+  // pasted URL. Handles multiple files (e.g. a whole folder) one at a time.
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || [])
+    if (!files.length) return
+    setUploading(true)
+    setUploadError('')
+    const uploaded = []
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        setUploadStatus(files.length > 1 ? `Uploading ${i + 1} of ${files.length}: ${file.name}` : `Uploading ${file.name}…`)
+        const blob = await upload(`hub/${tile.key}/${file.name}`, file, {
+          access: 'public',
+          handleUploadUrl: '/api/hub/upload',
+          headers: { 'x-hub-key': hubKey }
+        })
+        uploaded.push({ name: file.name, url: blob.url })
+      }
+      setLinks((prev) => {
+        const withoutEmpty = prev.filter((l) => l.name.trim() || l.url.trim())
+        return [...withoutEmpty, ...uploaded]
+      })
+    } catch (err) {
+      setUploadError(err?.message || 'Upload failed.')
+    } finally {
+      setUploading(false)
+      setUploadStatus('')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
@@ -137,7 +177,7 @@ function EntryDialog({ open, onClose, tile, entry, onSave }) {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 123 Main St, or Limo Assets" />
           </div>
           <div>
-            <label className="text-xs text-stone-500">Files & links (add as many as you need — Drive folders, docs, anything with a URL)</label>
+            <label className="text-xs text-stone-500">Files & links — upload files directly, or paste a URL (Drive folder, doc, anything)</label>
             <div className="space-y-2 mt-1">
               {links.map((l, i) => (
                 <div key={i} className="flex items-start gap-1">
@@ -163,9 +203,23 @@ function EntryDialog({ open, onClose, tile, entry, onSave }) {
                 </div>
               ))}
             </div>
-            <Button size="sm" variant="outline" className="mt-2" onClick={addLink}>
-              <Plus className="h-3 w-3 mr-1" /> Add another
-            </Button>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <Button size="sm" variant="outline" onClick={addLink}>
+                <Plus className="h-3 w-3 mr-1" /> Add another link
+              </Button>
+              <Button size="sm" variant="outline" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-3 w-3 mr-1" /> {uploading ? 'Uploading…' : 'Upload files'}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </div>
+            {uploadStatus && <p className="text-xs text-stone-500 mt-1">{uploadStatus}</p>}
+            {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
           <div>
             <label className="text-xs text-stone-500">Notes</label>
@@ -271,7 +325,7 @@ function TilePanel({ tile, hubKey, onClose, openEntryId }) {
           <Plus className="h-4 w-4 mr-1" /> Add entry
         </Button>
 
-        <EntryDialog open={dialogOpen} onClose={() => { setDialogOpen(false); setEditing(null) }} tile={tile} entry={editing} onSave={save} />
+        <EntryDialog open={dialogOpen} onClose={() => { setDialogOpen(false); setEditing(null) }} tile={tile} entry={editing} onSave={save} hubKey={hubKey} />
       </DialogContent>
     </Dialog>
   )
