@@ -982,7 +982,7 @@ function BrandFooterBar() {
               <img src={LOGOS.commercial} alt="Next Endeavor" className="h-10 w-10 object-contain flex-shrink-0" />
               <div className="min-w-0">
                 <div style={{ fontFamily: SERIF }} className="text-[#D4AF37] text-sm leading-none truncate">Next Endeavor CRE</div>
-                <div className="text-[9px] uppercase tracking-[0.22em] text-[#F5EDE0] font-semibold mt-1 truncate">$15,000 Credit. Every Closing.</div>
+                <div className="text-[9px] uppercase tracking-[0.22em] text-[#F5EDE0] font-semibold mt-1 truncate">$15,000 Credit. Qualifying Closings.</div>
               </div>
             </button>
           </PopoverTrigger>
