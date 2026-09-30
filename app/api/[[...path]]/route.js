@@ -270,7 +270,7 @@ Be honest. A lead who has only said "hi" is COLD. A lead who has shared budget+l
 const SPARK_CACHE = { ts: 0, data: [] }
 const SPARK_TTL_MS = 5 * 60 * 1000 // 5 min cache
 
-async function fetchLiveMLS({ prefs = {}, limit = 120 } = {}) {
+async function fetchLiveMLS({ prefs = {}, limit = 5000 } = {}) {
   const base = process.env.SPARK_API_BASE || 'https://replication.sparkapi.com/Version/3/Reso/OData'
   const token = process.env.SPARK_API_TOKEN
   if (!token) return null
@@ -301,17 +301,33 @@ async function fetchLiveMLS({ prefs = {}, limit = 120 } = {}) {
     'ListAgentFirstName','ListAgentLastName','ListOfficeName',
     'Latitude','Longitude','VirtualTourURLUnbranded','PhotosCount','ModificationTimestamp'
   ].join(','))
-  const url = `${base}/Property?$top=${limit}&$filter=${filter}&$select=${select}&$expand=Media&$orderby=ModificationTimestamp desc`
+  // Secondary sort key (ListingKey) keeps page boundaries stable — without it,
+  // ties on ModificationTimestamp can cause a record to be skipped or repeated
+  // across pages.
+  const pageSize = 200 // Spark's max per-page size
+  let url = `${base}/Property?$top=${pageSize}&$filter=${filter}&$select=${select}&$expand=Media&$orderby=ModificationTimestamp desc,ListingKey desc`
 
-  const res = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-  })
-  if (!res.ok) {
-    console.error('[SparkAPI] failed:', res.status, await res.text().catch(() => ''))
-    return null
+  const records = []
+  let fetchedAnyPage = false
+  while (url && records.length < limit) {
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    })
+    if (!res.ok) {
+      console.error('[SparkAPI] failed:', res.status, await res.text().catch(() => ''))
+      break
+    }
+    fetchedAnyPage = true
+    const data = await res.json()
+    const page = data.value || []
+    records.push(...page)
+    // Follow Spark's own next-page link rather than computing $skip ourselves.
+    url = page.length === pageSize ? (data['@odata.nextLink'] || null) : null
   }
-  const data = await res.json()
-  return (data.value || []).map(mapResoToHobson).filter(Boolean)
+  // Preserve null (feed error, not even the first page succeeded) vs [] (feed
+  // worked, genuinely zero matches) — callers rely on this distinction.
+  if (!fetchedAnyPage) return null
+  return records.slice(0, limit).map(mapResoToHobson).filter(Boolean)
 }
 
 function mapResoToHobson(r) {
@@ -358,7 +374,7 @@ async function getLiveCatalog(db, prefs = {}) {
   // NO Mongo persistence. NO DB sync. Live JSON straight to Hobson.
   if (process.env.SPARK_API_TOKEN) {
     try {
-      const live = await fetchLiveMLS({ prefs, limit: 200 })
+      const live = await fetchLiveMLS({ prefs })
       if (live && live.length > 0) return live
     } catch (e) {
       console.error('[SparkAPI] Fetch error:', e.message)
@@ -397,7 +413,7 @@ async function liveIdxSearch({ preferences = {} } = {}) {
   }
 
   try {
-    const live = await fetchLiveMLS({ prefs, limit: 200 })
+    const live = await fetchLiveMLS({ prefs })
     // Preserve null (feed error) vs [] (genuine zero matches) distinction —
     // do NOT collapse null to [] here, the caller relies on it to tell
     // "feed unavailable" apart from "no listings found".
