@@ -22,6 +22,28 @@ export const metadata = {
   }
 }
 
+// Clawd, the Claude Code mascot, as pixel art on a 14x11 grid.
+function Clawd() {
+  const C = '#CC785C'
+  const px = (x, y, w = 1, h = 1, fill = C) => <rect key={`${x}-${y}-${fill}`} x={x} y={y} width={w} height={h} fill={fill} />
+  return (
+    <svg width="18" height="15" viewBox="0 0 14 11" shapeRendering="crispEdges" aria-hidden="true">
+      {/* head bump */}
+      {px(5, 0, 4, 1)}
+      {px(4, 1, 6, 1)}
+      {/* body block */}
+      {px(1, 2, 12, 6)}
+      {/* eyes */}
+      {px(4, 4, 1, 2, '#2A1711')}
+      {px(9, 4, 1, 2, '#2A1711')}
+      {/* legs */}
+      {px(2, 8, 2, 2)}
+      {px(6, 8, 2, 2)}
+      {px(10, 8, 2, 2)}
+    </svg>
+  )
+}
+
 function Eyebrow({ children, color = GOLD }) {
   return (
     <p className="text-center text-[11px] font-semibold uppercase tracking-[0.32em]" style={{ color }}>
@@ -165,7 +187,10 @@ export default function PaulCard() {
           >
             Want one? Call Paul at {PHONE_DISPLAY}
           </a>
-          <p className="mt-4 text-[11px] tracking-wide text-[#6B6082]/70">Built with Claude Code and Grok</p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-[11px] tracking-wide text-[#6B6082]/70">
+            <Clawd />
+            <span>Built with Claude Code and Grok</span>
+          </div>
         </section>
 
         {/* Share */}
