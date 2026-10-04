@@ -18,7 +18,7 @@ export const metadata = {
     url: 'https://paul.askhobson.homes',
     title: 'Paul Schafranick | Palm Beach Real Estate',
     description: 'Residential and commercial real estate in Palm Beach County. Save my contact, call, or text.',
-    images: ['/paul/team.jpg']
+    images: ['/paul/og.jpg']
   }
 }
 
@@ -171,13 +171,21 @@ export default function PaulCard() {
         {/* Share */}
         <footer className="bg-[#070B12] px-6 pb-10 pt-9 text-center">
           <ShareButton />
-          <div className="mt-6 flex justify-center gap-3">
-            <a
-              href="https://www.linkedin.com/in/paul-schafranick-ab8087237"
-              className="rounded-full border border-white/15 px-5 py-2 text-[13px] text-[#F5EDE0]/80 transition hover:border-white/35"
-            >
-              LinkedIn
-            </a>
+          <div className="mt-6 grid grid-cols-2 gap-2.5">
+            {[
+              { label: 'Instagram', href: 'https://www.instagram.com/paulschafranick_realtor/' },
+              { label: 'YouTube', href: 'https://www.youtube.com/@palmbeachrealestatepros' },
+              { label: 'Facebook', href: 'https://www.facebook.com/PSchafranick/' },
+              { label: 'LinkedIn', href: 'https://www.linkedin.com/in/paul-schafranick-ab8087237' }
+            ].map((s) => (
+              <a
+                key={s.label}
+                href={s.href}
+                className="rounded-full border border-white/15 py-2.5 text-[13px] text-[#F5EDE0]/80 transition hover:border-white/35"
+              >
+                {s.label}
+              </a>
+            ))}
           </div>
           <div className="mx-auto mt-7 w-32 rounded-xl bg-white p-2.5">
             <img src="/paul/qr.svg" alt="QR code for paul.askhobson.homes" className="h-full w-full" />
