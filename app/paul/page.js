@@ -13,6 +13,13 @@ export const metadata = {
   title: 'Paul Schafranick | Palm Beach Real Estate',
   description: 'Residential and commercial real estate in Palm Beach County, plus AI websites and follow-up systems for local businesses. Call or text (561) 255-7285.',
   alternates: { canonical: 'https://paul.askhobson.homes' },
+  manifest: '/paul/manifest.webmanifest',
+  icons: {
+    icon: [{ url: '/paul/favicon-48.png', sizes: '48x48', type: 'image/png' }, { url: '/paul/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    shortcut: '/paul/favicon-48.png',
+    apple: '/paul/apple-touch-icon.png'
+  },
+  appleWebApp: { capable: true, title: 'Paul', statusBarStyle: 'black-translucent' },
   openGraph: {
     type: 'profile',
     url: 'https://paul.askhobson.homes',
@@ -43,6 +50,8 @@ function Clawd() {
     </svg>
   )
 }
+
+export const viewport = { themeColor: '#0A1628' }
 
 function Eyebrow({ children, color = GOLD }) {
   return (
