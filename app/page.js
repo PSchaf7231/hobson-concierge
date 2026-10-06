@@ -13,6 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import HobsonVoiceAgent from '@/components/HobsonVoiceAgent'
 import { Sparkles, Send, MapPin, BedDouble, Bath, Maximize, TrendingUp, Users, MessageSquare, Settings, Heart, Flame, Snowflake, Thermometer, Building2, Crown, Calendar, Eye, X, Printer, Map as MapIcon, Volume2, Loader2, Bookmark, Play, Pause, BookOpen } from 'lucide-react'
 import { GuidePanel } from '@/components/GuidePanel'
+import { GUIDES } from '@/lib/seo/guides'
 
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center bg-[#0A1628] text-[#D4AF37]/60">Loading map…</div> })
 const MicroOrb = dynamic(() => import('@/components/MicroOrb'), { ssr: false })
@@ -1134,6 +1135,7 @@ function App() {
               Allowed to shrink (unlike the tabs/lead-capture groups, which never do) so it
               absorbs any squeeze itself via ellipsis rather than pushing Save Search off-screen. */}
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-shrink basis-auto">
+            <h1 className="flex min-w-0">
             <a
               href="/"
               aria-label="Palm Beach Real Estate Pros, home"
@@ -1142,6 +1144,7 @@ function App() {
             >
               <span style={{ fontSize: '1.3em' }}>P</span>ALM <span style={{ fontSize: '1.3em' }}>B</span>EACH <span style={{ fontSize: '1.3em' }}>R</span>EAL <span style={{ fontSize: '1.3em' }}>E</span>STATE <span style={{ fontSize: '1.3em' }}>P</span>ROS
             </a>
+            </h1>
           </div>
           {/* CENTER: tabs */}
           <Tabs value={tab} onValueChange={setTab} className="flex-shrink-0">
@@ -1161,12 +1164,15 @@ function App() {
           </Tabs>
           {/* RIGHT: inline lead capture (3 shaded fields + save) */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => setGuideOpen(true)}
+            {/* Real link to /guides so crawlers can follow it; JS users still get the slide-out panel. */}
+            <a
+              href="/guides"
+              aria-label="Guides"
+              onClick={(e) => { e.preventDefault(); setGuideOpen(true) }}
               className="h-8 px-2 sm:px-3 rounded border border-[#D4AF37]/40 text-[#D4AF37] text-[10px] uppercase tracking-[0.22em] flex items-center gap-1 hover:bg-[#D4AF37]/10 transition flex-shrink-0"
             >
               <BookOpen className="h-3 w-3" /><span className="hidden sm:inline">Guide</span>
-            </button>
+            </a>
             <InlineLeadCapture />
           </div>
         </div>
@@ -1232,6 +1238,17 @@ function App() {
           Paul Schafranick · VantaSure Realty · Palm Beach Real Estate Pros · 32 SE 2nd Ave Ste 339, Delray Beach, FL 33444 ·{' '}
           <a href="tel:+15612557285" className="hover:text-[#D4AF37] transition">561-255-7285</a>
         </address>
+        <nav aria-label="Guides" className="max-w-[1600px] mx-auto px-6 pt-1 text-[10px] text-[#F5EDE0]/30">
+          <a href="/guides" className="hover:text-[#D4AF37] transition">Guides</a>
+          {GUIDES.map((g) => (
+            <React.Fragment key={g.href}>
+              {' · '}
+              <a href={g.href} className="hover:text-[#D4AF37] transition">{g.label}</a>
+            </React.Fragment>
+          ))}
+          {' · '}
+          <a href="/faq" className="hover:text-[#D4AF37] transition">FAQ</a>
+        </nav>
       </footer>
     </div>
   )

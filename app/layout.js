@@ -29,7 +29,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <Script
+        {/* Plain <script> (not next/script) so the JSON-LD is in the server HTML, not injected after hydration. */}
+        <script
           id="schema-localbusiness"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaLocalBusiness) }}
