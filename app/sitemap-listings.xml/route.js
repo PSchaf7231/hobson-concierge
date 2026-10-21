@@ -1,5 +1,5 @@
 import { fetchLiveMLS } from '@/lib/spark'
-import { listingSlug } from '@/lib/listings'
+import { listingSlug, isPalmBeachCounty } from '@/lib/listings'
 
 // Loaded on request (not at build time): walking the whole feed is slow, and a
 // slow build would block every deploy. The CDN caches the result for an hour.
@@ -12,7 +12,7 @@ export async function GET() {
   if (listings === null) {
     return new Response('Listings feed unavailable', { status: 503, headers: { 'Cache-Control': 'no-store' } })
   }
-  const urls = listings.map((l) => {
+  const urls = listings.filter(isPalmBeachCounty).map((l) => {
     const lastmod = l.modifiedAt ? `<lastmod>${new Date(l.modifiedAt).toISOString()}</lastmod>` : ''
     return `  <url><loc>https://www.askhobson.homes/listings/${listingSlug(l)}</loc>${lastmod}</url>`
   })

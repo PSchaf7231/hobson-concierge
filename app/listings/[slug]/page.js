@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { GuidePageLayout, GuideLink } from '@/components/GuidePageLayout'
 import { fetchLiveMLS } from '@/lib/spark'
-import { listingKeyFromSlug, listingSlug, money } from '@/lib/listings'
+import { listingKeyFromSlug, listingSlug, money, isPalmBeachCounty } from '@/lib/listings'
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -15,7 +15,8 @@ async function getListing(slug) {
   const key = listingKeyFromSlug(slug)
   if (!key) return null
   const rows = await fetchLiveMLS({ prefs: { listingKey: key }, limit: 1 })
-  return rows?.[0] || null
+  const l = rows?.[0]
+  return l && isPalmBeachCounty(l) ? l : null
 }
 
 export async function generateMetadata({ params }) {
