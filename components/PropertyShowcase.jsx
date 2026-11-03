@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { listingSlug } from '@/lib/listings'
 
 // Renders children at document.body instead of in place. Needed because these
 // cards have a CSS animation that ends on a non-'none' transform (dealIn's
@@ -359,7 +360,15 @@ function PropertyDetailModal({ p, index = 0, onClose }) {
           )}
 
           {/* Contact */}
-          <div className="mt-6 pt-5 border-t border-[#D4AF37]/15 flex justify-end">
+          <div className="mt-6 pt-5 border-t border-[#D4AF37]/15 flex flex-wrap justify-end gap-3">
+            {p.source === 'MLS' && p.id && (
+              <a
+                href={`/listings/${listingSlug(p)}`}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-[10px] uppercase tracking-[0.22em] font-semibold text-[#D4AF37] border border-[#D4AF37]/40 hover:bg-[#D4AF37]/10 transition"
+              >
+                View full listing →
+              </a>
+            )}
             <a
               href="tel:+15612557285"
               className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-[10px] uppercase tracking-[0.28em] font-semibold text-[#3a2a10] transition shadow-md hover:brightness-110"
